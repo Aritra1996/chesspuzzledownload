@@ -44,7 +44,7 @@ print("🔄 Loading dataset (streaming)...")
 ds = load_dataset("Lichess/chess-puzzles", split="train", streaming=True)
 
 batch      = []
-TEST_LIMIT = 10
+TEST_LIMIT = 1000
 
 UPSERT_SQL = """
     INSERT OR REPLACE INTO puzzles (PuzzleId, FEN, Moves, Rating, Themes, OpeningTags)
