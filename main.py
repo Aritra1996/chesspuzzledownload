@@ -1,6 +1,9 @@
-def main():
-    print("Hello from chesspuzzledownload!")
+from fasthtml.common import *
 
+app, rt = fast_app()
 
-if __name__ == "__main__":
-    main()
+@rt("/")
+def get():
+    return Titled("Chess Puzzles", P("Setup successful ♟️"))
+
+serve()
