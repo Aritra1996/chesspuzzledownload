@@ -13,13 +13,17 @@
 /* ── Reset / base ────────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
 
+html {
+    background: var(--bg);
+    min-height: 100vh;
+}
+
 body {
     font-family: system-ui, sans-serif;
     background: var(--bg);
     color: var(--text);
-    max-width: 1100px;
-    margin: 2rem auto;
-    padding: 0 1rem;
+    min-height: 100vh;
+    padding: 1.5rem 2rem 0;
 }
 
 h1, h2, h3 {
@@ -140,4 +144,10 @@ input[type=range] {
     color: var(--text-muted);
     font-size: 1.1rem;
     margin-bottom: 2rem;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+    body     { padding: 1rem 1rem 0; }
+    .hero h1 { font-size: 2rem; }
 }

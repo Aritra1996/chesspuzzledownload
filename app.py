@@ -3,4 +3,4 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-app, rt = fast_app()
+app, rt = fast_app(pico=False)

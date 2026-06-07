@@ -1,3 +1,49 @@
+.meta-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 0.75rem;
+}
+
+.meta-row .meta { margin: 0; }
+
+.pagination {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.page-info { font-size: 0.9rem; color: #c9a84c; white-space: nowrap; }
+
+.puzzle-section {
+    display: flex;
+    gap: 2rem;
+    align-items: flex-start;
+    margin-top: 1rem;
+}
+
+.puzzle-section .puzzle-grid { flex: 1; margin-top: 0; }
+
+.pdf-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    min-width: 145px;
+    padding-top: 1.5rem;
+}
+
+.btn-disabled {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.empty-state {
+    margin-top: 2rem;
+    text-align: center;
+}
+
+.empty-hint { color: #9e8b6a; font-size: 0.95rem; }
+
 .puzzle-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
@@ -31,3 +77,18 @@
 .theme-tags { font-size: 0.75rem; color: #9e8b6a; }
 
 .to-move { font-size: 0.85rem; color: #f0e6cc; }
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+    .puzzle-section { flex-direction: column; }
+    .pdf-panel {
+        flex-direction: row;
+        padding-top: 0;
+        min-width: auto;
+    }
+}
+
+@media (max-width: 640px) {
+    .meta-row    { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+    .filter-group { min-width: 100%; }
+}

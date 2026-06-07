@@ -5,50 +5,47 @@ PAGE_W = 210
 PAGE_H = 297
 
 # ── Board rendering ──────────────────────────────────────────────────────────
-BOARD_W        = 88    # board width in PDF (mm)
+BOARD_W        = 90    # board width in PDF (mm)
 BOARD_SVG_SIZE = 400   # internal SVG pixel size
 X_BOARD        = (PAGE_W - BOARD_W) / 2   # horizontally centred
 
 # ── Layout ───────────────────────────────────────────────────────────────────
 PUZZLES_PER_PAGE = 2
 SLOT_H           = PAGE_H / PUZZLES_PER_PAGE
-SLOT_PADDING_TOP = 6
-BOARD_OFFSET_Y   = 8
-BOARD_FOOTER_GAP = 2
-MARGIN_LEFT      = 10
 
-# ── Fonts ────────────────────────────────────────────────────────────────────
-FONT_FAMILY      = "Helvetica"
-FONT_SIZE_HEADER = 10
-FONT_SIZE_BODY   = 9
-FONT_SIZE_FOOTER = 7
+# ── PDF colours (RGB) ─────────────────────────────────────────────────────────
+PDF_COLOR_DARK  = (26,  18,  9)    # near-black brown — header/badge background
+PDF_COLOR_GOLD  = (201, 168, 76)   # gold — accent text
+PDF_COLOR_LIGHT = (240, 230, 204)  # warm white — text on dark backgrounds
+PDF_COLOR_RULE  = (180, 150, 90)   # muted gold — horizontal rules
+PDF_COLOR_MUTED = (120, 100, 70)   # muted brown — secondary text
 
-# ── Cell heights ─────────────────────────────────────────────────────────────
-CELL_H_SMALL = 4   # used for footer/theme/ID rows
+# ── PDF margins & spacing ─────────────────────────────────────────────────────
+PDF_MARGIN       = 14   # left / right page margin (mm)
+PDF_HEADER_H     = 16   # height of the top filter-summary band (mm)
+PDF_BADGE_H      = 8    # height of each puzzle's number/rating badge row (mm)
+PDF_BOARD_GAP    = 4    # vertical gap between badge bottom and board top (mm)
+PDF_BELOW_BOARD  = 5    # vertical gap below board to "to move" line (mm)
+PDF_CARD_SPACING = 6    # vertical gap between two puzzle cards on the same page (mm)
 
-# ── Text formatting ──────────────────────────────────────────────────────────
-TRUNCATION_SUFFIX = "..."   # appended when theme text is clipped
-RATING_SYMBOL     = "*"     # latin-1-safe replacement for the star glyph
+# ── PDF fonts & sizes ─────────────────────────────────────────────────────────
+PDF_FONT        = "Helvetica"
+PDF_SIZE_TITLE  = 13   # "CHESS PUZZLES" / "SOLUTIONS" in header band
+PDF_SIZE_FILTER = 8    # filter summary sub-line in header band
+PDF_SIZE_BADGE  = 10   # puzzle number + rating in badge
+PDF_SIZE_BODY   = 9    # regular body text
+PDF_SIZE_SMALL  = 7    # secondary labels (ID, "to move")
 
-# ── Text truncation ──────────────────────────────────────────────────────────
-THEMES_MAX_CHARS          = 72
-THEMES_MAX_CHARS_SOLUTION = 90
+# ── Solutions-specific ────────────────────────────────────────────────────────
+PDF_SOL_LINE_H  = 6    # line height for solution text rows
+PDF_SOL_INDENT  = 8    # left indent for solution content under the header row
+PDF_SOL_SPACING = 5    # vertical gap between solution entries
+
+# ── Misc ──────────────────────────────────────────────────────────────────────
+RATING_SYMBOL = "*"    # latin-1-safe replacement for the star glyph
 
 # ── Display pagination ───────────────────────────────────────────────────────
-PAGE_SIZE = 24
+PAGE_SIZE = 4
 
-# ── Separator line ───────────────────────────────────────────────────────────
-SEPARATOR_COLOR = (200, 200, 200)   # RGB grey
-
-# ── Solutions PDF layout ─────────────────────────────────────────────────────
-SOLUTIONS_PAGE_MARGIN   = 15
-SOLUTIONS_TITLE_SIZE    = 18
-SOLUTIONS_TITLE_LINE_H  = 12   # cell height for the "Solutions" title row
-SOLUTIONS_TITLE_SPACING = 6    # vertical space after subtitle
-SOLUTIONS_COL1_W        = 12   # puzzle number column
-SOLUTIONS_COL2_W        = 30   # puzzle ID column
-SOLUTIONS_COL3_W        = 22   # rating column
-SOLUTIONS_LINE_H        = 6
-SOLUTIONS_MULTI_LINE_H  = 5
-SOLUTIONS_INDENT        = 12
-SOLUTIONS_SPACING       = 3
+# ── PDF button re-enable delay (ms) after a download is triggered ─────────────
+PDF_BTN_REENABLE_MS = 6000

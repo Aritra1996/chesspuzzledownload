@@ -6,135 +6,185 @@ from fpdf import FPDF
 
 from puzzles.chess_utils import puzzle_position, uci_to_san_sequence
 from puzzles.constants import (
-    PAGE_W,
+    PAGE_W, PAGE_H,
     BOARD_W, BOARD_SVG_SIZE, X_BOARD,
-    PUZZLES_PER_PAGE, SLOT_H, SLOT_PADDING_TOP,
-    BOARD_OFFSET_Y, BOARD_FOOTER_GAP, MARGIN_LEFT,
-    FONT_FAMILY, FONT_SIZE_HEADER, FONT_SIZE_BODY, FONT_SIZE_FOOTER,
-    CELL_H_SMALL,
-    TRUNCATION_SUFFIX, RATING_SYMBOL,
-    THEMES_MAX_CHARS, THEMES_MAX_CHARS_SOLUTION,
-    SEPARATOR_COLOR,
-    SOLUTIONS_PAGE_MARGIN, SOLUTIONS_TITLE_SIZE,
-    SOLUTIONS_TITLE_LINE_H, SOLUTIONS_TITLE_SPACING,
-    SOLUTIONS_COL1_W, SOLUTIONS_COL2_W, SOLUTIONS_COL3_W,
-    SOLUTIONS_LINE_H, SOLUTIONS_MULTI_LINE_H,
-    SOLUTIONS_INDENT, SOLUTIONS_SPACING,
+    PUZZLES_PER_PAGE,
+    PDF_COLOR_DARK, PDF_COLOR_GOLD, PDF_COLOR_LIGHT, PDF_COLOR_RULE, PDF_COLOR_MUTED,
+    PDF_MARGIN, PDF_HEADER_H, PDF_BADGE_H,
+    PDF_BOARD_GAP, PDF_BELOW_BOARD, PDF_CARD_SPACING,
+    PDF_FONT, PDF_SIZE_TITLE, PDF_SIZE_FILTER, PDF_SIZE_BADGE, PDF_SIZE_BODY, PDF_SIZE_SMALL,
+    PDF_SOL_LINE_H, PDF_SOL_INDENT, PDF_SOL_SPACING,
+    RATING_SYMBOL,
 )
 
 
+def _filter_summary(theme: str, opening: str, min_rating: int, max_rating: int) -> str:
+    theme_label   = theme   if theme   else "All themes"
+    opening_label = opening if opening else "All openings"
+    return f"{theme_label}  |  {opening_label}  |  Rating {min_rating} - {max_rating}"
+
+
 def _board_svg_bytes(board: chess.Board, trigger: chess.Move | None) -> BytesIO:
-    """Render the board to an SVG BytesIO with the trigger move highlighted."""
-    svg_str = chess.svg.board(
-        board=board,
-        lastmove=trigger,
-        size=BOARD_SVG_SIZE,
-        coordinates=True,
-    )
+    svg_str = chess.svg.board(board=board, lastmove=trigger, size=BOARD_SVG_SIZE, coordinates=True)
     return BytesIO(svg_str.encode())
 
 
-def generate_puzzle_pdf(puzzles: list) -> bytes:
+class _BasePDF(FPDF):
+    """FPDF subclass that draws a dark filter-summary header band on every page."""
+
+    def __init__(self, title: str, filter_summary: str, **kwargs):
+        super().__init__(**kwargs)
+        self._title = title
+        self._filter_summary = filter_summary
+
+    def header(self):
+        # Dark background band
+        self.set_fill_color(*PDF_COLOR_DARK)
+        self.rect(0, 0, PAGE_W, PDF_HEADER_H, "F")
+
+        # Title — left, gold, bold
+        self.set_font(PDF_FONT, "B", PDF_SIZE_TITLE)
+        self.set_text_color(*PDF_COLOR_GOLD)
+        self.set_xy(PDF_MARGIN, (PDF_HEADER_H - PDF_SIZE_TITLE * 0.35) / 2)
+        self.cell(0, PDF_SIZE_TITLE * 0.35, self._title, ln=False)
+
+        # Filter summary — right, light, normal
+        self.set_font(PDF_FONT, "", PDF_SIZE_FILTER)
+        self.set_text_color(*PDF_COLOR_LIGHT)
+        self.set_xy(0, (PDF_HEADER_H - PDF_SIZE_FILTER * 0.35) / 2)
+        self.cell(PAGE_W - PDF_MARGIN, PDF_SIZE_FILTER * 0.35, self._filter_summary, align="R", ln=False)
+
+        # Reset text colour for body content
+        self.set_text_color(0, 0, 0)
+
+
+def generate_puzzle_pdf(puzzles: list, theme: str = "", opening: str = "",
+                        min_rating: int = 0, max_rating: int = 3000) -> bytes:
     """
     Puzzle PDF — 2 puzzles per A4 page.
-    Each puzzle shows: board position + which colour is to move.
-    Solutions are NOT included.
+    Dark header band on every page; all card body content on white background.
     """
-    pdf = FPDF(orientation="P", unit="mm", format="A4")
+    summary = _filter_summary(theme, opening, min_rating, max_rating)
+    pdf = _BasePDF(title="CHESS PUZZLES", filter_summary=summary,
+                   orientation="P", unit="mm", format="A4")
     pdf.set_auto_page_break(auto=False)
 
-    for i, (puzzle_id, fen, moves, rating, themes, _) in enumerate(puzzles):
+    # Available height per slot, correctly accounting for the header band
+    slot_h = (PAGE_H - PDF_HEADER_H) / PUZZLES_PER_PAGE
+
+    for i, (puzzle_id, fen, moves, rating, _, __) in enumerate(puzzles):
         slot = i % PUZZLES_PER_PAGE
         if slot == 0:
             pdf.add_page()
 
-        y0 = slot * SLOT_H + SLOT_PADDING_TOP
+        y0 = PDF_HEADER_H + slot * slot_h + PDF_CARD_SPACING
 
         board, trigger = puzzle_position(fen, moves)
-        to_move = "White" if board.turn == chess.WHITE else "Black"
+        to_move = "White to move" if board.turn == chess.WHITE else "Black to move"
 
-        # ── header ───────────────────────────────────────────────────────────
-        pdf.set_font(FONT_FAMILY, "B", FONT_SIZE_HEADER)
-        pdf.set_xy(MARGIN_LEFT, y0)
-        pdf.cell(
-            0, 7,
-            f"Puzzle #{i + 1}   .   Rating: {rating}   .   {to_move} to move",
-            ln=True,
-        )
+        # ── ruled divider line above each card ───────────────────────────────
+        pdf.set_draw_color(*PDF_COLOR_RULE)
+        pdf.line(PDF_MARGIN, y0, PAGE_W - PDF_MARGIN, y0)
+
+        # ── puzzle number (left) and rating (right) ───────────────────────────
+        label_row_y = y0 + 2
+        pdf.set_font(PDF_FONT, "B", PDF_SIZE_BADGE)
+        pdf.set_text_color(*PDF_COLOR_GOLD)
+        badge_w = PAGE_W - 2 * PDF_MARGIN
+
+        pdf.set_xy(PDF_MARGIN + 2, label_row_y)
+        pdf.cell(badge_w / 2, PDF_BADGE_H, f"# {i + 1}", ln=False)
+
+        pdf.set_xy(PDF_MARGIN, label_row_y)
+        pdf.cell(badge_w - 2, PDF_BADGE_H, f"{RATING_SYMBOL} {rating}", align="R", ln=False)
+
+        pdf.set_text_color(0, 0, 0)
 
         # ── board ─────────────────────────────────────────────────────────────
+        board_y = y0 + PDF_BADGE_H + PDF_BOARD_GAP
         svg_io = _board_svg_bytes(board, trigger)
-        pdf.image(svg_io, x=X_BOARD, y=y0 + BOARD_OFFSET_Y, w=BOARD_W)
+        pdf.image(svg_io, x=X_BOARD, y=board_y, w=BOARD_W)
 
-        # ── footer ────────────────────────────────────────────────────────────
-        footer_y = y0 + BOARD_OFFSET_Y + BOARD_W + BOARD_FOOTER_GAP
-        pdf.set_font(FONT_FAMILY, "I", FONT_SIZE_FOOTER)
-        pdf.set_xy(MARGIN_LEFT, footer_y)
-        short_themes = (
-            themes[:THEMES_MAX_CHARS] + TRUNCATION_SUFFIX
-            if len(themes) > THEMES_MAX_CHARS
-            else themes
-        )
-        pdf.cell(0, CELL_H_SMALL, f"Themes: {short_themes}", ln=True)
-        pdf.set_font(FONT_FAMILY, "", FONT_SIZE_FOOTER)
-        pdf.set_x(MARGIN_LEFT)
-        pdf.cell(0, CELL_H_SMALL, f"ID: {puzzle_id}", ln=True)
+        # ── "to move" and ID lines ────────────────────────────────────────────
+        label_y = board_y + BOARD_W + PDF_BELOW_BOARD
+        pdf.set_font(PDF_FONT, "I", PDF_SIZE_SMALL)
+        pdf.set_text_color(*PDF_COLOR_MUTED)
+        pdf.set_xy(0, label_y)
+        pdf.cell(PAGE_W, PDF_SIZE_SMALL * 0.35, to_move, align="C", ln=True)
 
-        # ── separator line between slots ──────────────────────────────────────
+        pdf.set_font(PDF_FONT, "", PDF_SIZE_SMALL)
+        pdf.set_x(0)
+        pdf.cell(PAGE_W, PDF_SIZE_SMALL * 0.35, f"ID: {puzzle_id}", align="C", ln=True)
+
+        pdf.set_text_color(0, 0, 0)
+
+        # ── separator between the two slots ───────────────────────────────────
         if slot == 0:
-            pdf.set_draw_color(*SEPARATOR_COLOR)
-            pdf.line(MARGIN_LEFT, SLOT_H, PAGE_W - MARGIN_LEFT, SLOT_H)
+            sep_y = PDF_HEADER_H + slot_h
+            pdf.set_draw_color(*PDF_COLOR_RULE)
+            pdf.line(PDF_MARGIN, sep_y, PAGE_W - PDF_MARGIN, sep_y)
 
     return bytes(pdf.output())
 
 
-def generate_solutions_pdf(puzzles: list) -> bytes:
+def generate_solutions_pdf(puzzles: list, theme: str = "", opening: str = "",
+                           min_rating: int = 0, max_rating: int = 3000) -> bytes:
     """
     Solutions PDF — text only, no boards.
-    Lists each puzzle's full solution line in SAN notation.
+    Dark header band on every page; all entry content on white background.
+    Each entry: thin gold rule, then puzzle info + solution on white.
     """
-    pdf = FPDF(orientation="P", unit="mm", format="A4")
-    pdf.set_auto_page_break(auto=True, margin=SOLUTIONS_PAGE_MARGIN)
+    summary = _filter_summary(theme, opening, min_rating, max_rating)
+    pdf = _BasePDF(title="SOLUTIONS", filter_summary=summary,
+                   orientation="P", unit="mm", format="A4")
+    pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
 
-    # ── title ─────────────────────────────────────────────────────────────────
-    pdf.set_font(FONT_FAMILY, "B", SOLUTIONS_TITLE_SIZE)
-    pdf.cell(0, SOLUTIONS_TITLE_LINE_H, "Solutions", ln=True, align="C")
-    pdf.set_font(FONT_FAMILY, "", FONT_SIZE_BODY)
-    pdf.cell(0, SOLUTIONS_LINE_H, f"{len(puzzles)} puzzle(s)", ln=True, align="C")
-    pdf.ln(SOLUTIONS_TITLE_SPACING)
+    # Sub-title: puzzle count
+    pdf.set_y(PDF_HEADER_H + 4)
+    pdf.set_font(PDF_FONT, "", PDF_SIZE_BODY)
+    pdf.set_text_color(*PDF_COLOR_MUTED)
+    pdf.set_x(PDF_MARGIN)
+    pdf.cell(0, PDF_SOL_LINE_H, f"{len(puzzles)} puzzle(s)", ln=True)
+    pdf.ln(3)
+    pdf.set_text_color(0, 0, 0)
 
-    # ── one entry per puzzle ──────────────────────────────────────────────────
-    for i, (puzzle_id, fen, moves, rating, themes, _) in enumerate(puzzles):
+    for i, (puzzle_id, fen, moves, rating, _, __) in enumerate(puzzles):
         move_list = moves.split()
         board, _ = puzzle_position(fen, moves)
-        to_move = "White" if board.turn == chess.WHITE else "Black"
+        to_move = "White to move" if board.turn == chess.WHITE else "Black to move"
 
         solution_ucis = move_list[1:] if len(move_list) > 1 else []
-        solution_san  = uci_to_san_sequence(board, solution_ucis) or "-"
+        solution_san = uci_to_san_sequence(board, solution_ucis) or "-"
 
-        # Row 1: puzzle number, ID, rating, colour
-        pdf.set_font(FONT_FAMILY, "B", FONT_SIZE_BODY)
-        pdf.cell(SOLUTIONS_COL1_W, SOLUTIONS_LINE_H, f"#{i + 1}", border=0)
-        pdf.cell(SOLUTIONS_COL2_W, SOLUTIONS_LINE_H, f"[{puzzle_id}]", border=0)
-        pdf.cell(SOLUTIONS_COL3_W, SOLUTIONS_LINE_H, f"{RATING_SYMBOL} {rating}", border=0)
-        pdf.cell(0, SOLUTIONS_LINE_H, f"{to_move} to move", ln=True)
+        # ── thin gold rule above each entry ──────────────────────────────────
+        rule_y = pdf.get_y()
+        pdf.set_draw_color(*PDF_COLOR_RULE)
+        pdf.line(PDF_MARGIN, rule_y, PAGE_W - PDF_MARGIN, rule_y)
+        pdf.ln(2)
 
-        # Row 2: solution line
-        pdf.set_font(FONT_FAMILY, "", FONT_SIZE_BODY)
-        pdf.set_x(SOLUTIONS_INDENT)
-        pdf.multi_cell(0, SOLUTIONS_MULTI_LINE_H, f"Solution:  {solution_san}")
+        # ── entry header row (white background, no fill) ──────────────────────
+        col1_w, col2_w, col3_w = 16, 36, 24
 
-        # Row 3: themes
-        pdf.set_font(FONT_FAMILY, "I", FONT_SIZE_FOOTER)
-        pdf.set_x(SOLUTIONS_INDENT)
-        short_themes = (
-            themes[:THEMES_MAX_CHARS_SOLUTION] + TRUNCATION_SUFFIX
-            if len(themes) > THEMES_MAX_CHARS_SOLUTION
-            else themes
-        )
-        pdf.cell(0, CELL_H_SMALL, f"Themes: {short_themes}", ln=True)
+        pdf.set_font(PDF_FONT, "B", PDF_SIZE_BODY)
+        pdf.set_text_color(*PDF_COLOR_GOLD)
+        pdf.set_x(PDF_MARGIN + 2)
+        pdf.cell(col1_w, PDF_SOL_LINE_H, f"#{i + 1}", ln=False)
 
-        pdf.ln(SOLUTIONS_SPACING)
+        pdf.set_font(PDF_FONT, "", PDF_SIZE_BODY)
+        pdf.set_text_color(*PDF_COLOR_DARK)
+        pdf.cell(col2_w, PDF_SOL_LINE_H, f"[{puzzle_id}]", ln=False)
+        pdf.cell(col3_w, PDF_SOL_LINE_H, f"{RATING_SYMBOL} {rating}", ln=False)
+        pdf.cell(0, PDF_SOL_LINE_H, to_move, ln=True)
+
+        pdf.set_text_color(0, 0, 0)
+
+        # ── solution line ─────────────────────────────────────────────────────
+        pdf.set_font(PDF_FONT, "", PDF_SIZE_BODY)
+        pdf.set_x(PDF_MARGIN + PDF_SOL_INDENT)
+        pdf.multi_cell(PAGE_W - 2 * PDF_MARGIN - PDF_SOL_INDENT, PDF_SOL_LINE_H,
+                       f"Solution:  {solution_san}")
+
+        pdf.ln(PDF_SOL_SPACING)
 
     return bytes(pdf.output())
