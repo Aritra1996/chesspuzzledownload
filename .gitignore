@@ -14,3 +14,4 @@ wheels/
 
 # FastHTML session key — never commit
 .sesskey
+.vercel
