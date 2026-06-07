@@ -7,7 +7,7 @@ from puzzles.db import query_puzzles
 from puzzles.pdf import generate_puzzle_pdf, generate_solutions_pdf
 from puzzles.state import RATING_MAX, RATING_MIN
 from puzzles.validators import sanitise_rating
-from puzzles.views import css_link, filter_bar
+from puzzles.views import css_link, filter_bar, puzzle_css_link, puzzle_grid
 
 
 @rt("/puzzles")
@@ -21,8 +21,10 @@ def get(theme: str = "", min_rating: int = RATING_MIN, max_rating: int = RATING_
 
     return (
         css_link(),
+        puzzle_css_link(),
         filter_bar(theme, min_rating, max_rating),
         P(meta, cls="meta"),
+        puzzle_grid(puzzles),
     )
 
 

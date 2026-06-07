@@ -1,0 +1,33 @@
+.puzzle-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1.25rem;
+    margin-top: 1.5rem;
+}
+
+.puzzle-card {
+    background: #3b2a12;
+    border: 1px solid #5a3e1a;
+    border-radius: 8px;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.puzzle-card svg { width: 100%; height: auto; border-radius: 4px; }
+
+.puzzle-meta { display: flex; justify-content: space-between; align-items: center; }
+
+.rating-badge {
+    background: #c9a84c;
+    color: #1a1209;
+    font-weight: 700;
+    font-size: 0.8rem;
+    padding: 2px 7px;
+    border-radius: 12px;
+}
+
+.theme-tags { font-size: 0.75rem; color: #9e8b6a; }
+
+.to-move { font-size: 0.85rem; color: #f0e6cc; }
