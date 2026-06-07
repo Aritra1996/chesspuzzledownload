@@ -1,0 +1,5 @@
+python-fasthtml>=0.14.2
+fpdf2>=2.8.7
+python-chess>=1.999
+python-dotenv>=1.2.2
+libsql-experimental>=0.0.55
