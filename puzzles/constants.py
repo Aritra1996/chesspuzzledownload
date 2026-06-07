@@ -26,6 +26,10 @@ FONT_SIZE_FOOTER = 7
 # ── Cell heights ─────────────────────────────────────────────────────────────
 CELL_H_SMALL = 4   # used for footer/theme/ID rows
 
+# ── Text formatting ──────────────────────────────────────────────────────────
+TRUNCATION_SUFFIX = "..."   # appended when theme text is clipped
+RATING_SYMBOL     = "*"     # latin-1-safe replacement for the star glyph
+
 # ── Text truncation ──────────────────────────────────────────────────────────
 THEMES_MAX_CHARS          = 72
 THEMES_MAX_CHARS_SOLUTION = 90
@@ -37,14 +41,14 @@ MAX_PDF_PUZZLES = 20
 SEPARATOR_COLOR = (200, 200, 200)   # RGB grey
 
 # ── Solutions PDF layout ─────────────────────────────────────────────────────
-SOLUTIONS_PAGE_MARGIN  = 15
-SOLUTIONS_TITLE_SIZE   = 18
-SOLUTIONS_TITLE_LINE_H = 12   # cell height for the "Solutions" title row
-SOLUTIONS_TITLE_SPACING = 6   # vertical space after subtitle
-SOLUTIONS_COL1_W       = 12   # puzzle number column
-SOLUTIONS_COL2_W       = 30   # puzzle ID column
-SOLUTIONS_COL3_W       = 22   # rating column
-SOLUTIONS_LINE_H       = 6
-SOLUTIONS_MULTI_LINE_H = 5
-SOLUTIONS_INDENT       = 12
-SOLUTIONS_SPACING      = 3
+SOLUTIONS_PAGE_MARGIN   = 15
+SOLUTIONS_TITLE_SIZE    = 18
+SOLUTIONS_TITLE_LINE_H  = 12   # cell height for the "Solutions" title row
+SOLUTIONS_TITLE_SPACING = 6    # vertical space after subtitle
+SOLUTIONS_COL1_W        = 12   # puzzle number column
+SOLUTIONS_COL2_W        = 30   # puzzle ID column
+SOLUTIONS_COL3_W        = 22   # rating column
+SOLUTIONS_LINE_H        = 6
+SOLUTIONS_MULTI_LINE_H  = 5
+SOLUTIONS_INDENT        = 12
+SOLUTIONS_SPACING       = 3

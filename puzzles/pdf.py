@@ -12,6 +12,7 @@ from puzzles.constants import (
     BOARD_OFFSET_Y, BOARD_FOOTER_GAP, MARGIN_LEFT,
     FONT_FAMILY, FONT_SIZE_HEADER, FONT_SIZE_BODY, FONT_SIZE_FOOTER,
     CELL_H_SMALL,
+    TRUNCATION_SUFFIX, RATING_SYMBOL,
     THEMES_MAX_CHARS, THEMES_MAX_CHARS_SOLUTION,
     SEPARATOR_COLOR,
     SOLUTIONS_PAGE_MARGIN, SOLUTIONS_TITLE_SIZE,
@@ -57,7 +58,7 @@ def generate_puzzle_pdf(puzzles: list) -> bytes:
         pdf.set_xy(MARGIN_LEFT, y0)
         pdf.cell(
             0, 7,
-            f"Puzzle #{i + 1}   ·   Rating: {rating}   ·   {to_move} to move",
+            f"Puzzle #{i + 1}   .   Rating: {rating}   .   {to_move} to move",
             ln=True,
         )
 
@@ -69,7 +70,11 @@ def generate_puzzle_pdf(puzzles: list) -> bytes:
         footer_y = y0 + BOARD_OFFSET_Y + BOARD_W + BOARD_FOOTER_GAP
         pdf.set_font(FONT_FAMILY, "I", FONT_SIZE_FOOTER)
         pdf.set_xy(MARGIN_LEFT, footer_y)
-        short_themes = (themes[:THEMES_MAX_CHARS] + "…") if len(themes) > THEMES_MAX_CHARS else themes
+        short_themes = (
+            themes[:THEMES_MAX_CHARS] + TRUNCATION_SUFFIX
+            if len(themes) > THEMES_MAX_CHARS
+            else themes
+        )
         pdf.cell(0, CELL_H_SMALL, f"Themes: {short_themes}", ln=True)
         pdf.set_font(FONT_FAMILY, "", FONT_SIZE_FOOTER)
         pdf.set_x(MARGIN_LEFT)
@@ -106,13 +111,13 @@ def generate_solutions_pdf(puzzles: list) -> bytes:
         to_move = "White" if board.turn == chess.WHITE else "Black"
 
         solution_ucis = move_list[1:] if len(move_list) > 1 else []
-        solution_san  = uci_to_san_sequence(board, solution_ucis) or "—"
+        solution_san  = uci_to_san_sequence(board, solution_ucis) or "-"
 
         # Row 1: puzzle number, ID, rating, colour
         pdf.set_font(FONT_FAMILY, "B", FONT_SIZE_BODY)
         pdf.cell(SOLUTIONS_COL1_W, SOLUTIONS_LINE_H, f"#{i + 1}", border=0)
         pdf.cell(SOLUTIONS_COL2_W, SOLUTIONS_LINE_H, f"[{puzzle_id}]", border=0)
-        pdf.cell(SOLUTIONS_COL3_W, SOLUTIONS_LINE_H, f"★ {rating}", border=0)
+        pdf.cell(SOLUTIONS_COL3_W, SOLUTIONS_LINE_H, f"{RATING_SYMBOL} {rating}", border=0)
         pdf.cell(0, SOLUTIONS_LINE_H, f"{to_move} to move", ln=True)
 
         # Row 2: solution line
@@ -123,7 +128,11 @@ def generate_solutions_pdf(puzzles: list) -> bytes:
         # Row 3: themes
         pdf.set_font(FONT_FAMILY, "I", FONT_SIZE_FOOTER)
         pdf.set_x(SOLUTIONS_INDENT)
-        short_themes = (themes[:THEMES_MAX_CHARS_SOLUTION] + "…") if len(themes) > THEMES_MAX_CHARS_SOLUTION else themes
+        short_themes = (
+            themes[:THEMES_MAX_CHARS_SOLUTION] + TRUNCATION_SUFFIX
+            if len(themes) > THEMES_MAX_CHARS_SOLUTION
+            else themes
+        )
         pdf.cell(0, CELL_H_SMALL, f"Themes: {short_themes}", ln=True)
 
         pdf.ln(SOLUTIONS_SPACING)
