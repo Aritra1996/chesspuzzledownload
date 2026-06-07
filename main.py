@@ -1,9 +1,24 @@
 from fasthtml.common import *
 
-app, rt = fast_app()
+from app import app, rt
+from puzzles.views import css_link
+
+import puzzles.routes  # importing this registers all @rt decorators inside it
+
 
 @rt("/")
-def get():
-    return Titled("Chess Puzzles", P("Setup successful ♟️"))
+def index():
+    return (
+        css_link(),
+        Main(
+            Div(
+                H1("Chess Puzzles ♟️"),
+                P("Filter puzzles by theme and difficulty. Download boards and solutions as PDF."),
+                A("Browse Puzzles →", href="/puzzles", cls="btn btn-primary"),
+                cls="hero",
+            )
+        ),
+    )
+
 
 serve()
