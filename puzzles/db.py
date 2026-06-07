@@ -17,8 +17,23 @@ def fetch_rating_bounds() -> tuple[int, int]:
     return (lo or 0, hi or 3000)
  
  
-def query_puzzles(theme: str, min_r: int, max_r: int, limit: int = 24) -> list:
-    """Shared query used by both the display route and PDF download routes."""
+def fetch_total_puzzles() -> int:
+    (count,) = fetch_one("SELECT COUNT(*) FROM puzzles")
+    return count
+
+
+def count_puzzles(theme: str, min_r: int, max_r: int) -> int:
+    sql = "SELECT COUNT(*) FROM puzzles WHERE Rating BETWEEN ? AND ?"
+    params: list = [min_r, max_r]
+    if theme:
+        sql += " AND instr(' ' || Themes || ' ', ' ' || ? || ' ') > 0"
+        params.append(theme)
+    (count,) = fetch_one(sql, tuple(params))
+    return count
+
+
+def query_puzzles(theme: str, min_r: int, max_r: int,
+                  limit: int | None = None, offset: int = 0) -> list:
     sql = """
         SELECT PuzzleId, FEN, Moves, Rating, Themes, OpeningTags
         FROM puzzles
@@ -28,7 +43,9 @@ def query_puzzles(theme: str, min_r: int, max_r: int, limit: int = 24) -> list:
     if theme:
         sql += " AND instr(' ' || Themes || ' ', ' ' || ? || ' ') > 0"
         params.append(theme)
-    sql += " ORDER BY Rating LIMIT ?"
-    params.append(limit)
-    rows = fetch_all(sql, tuple(params))   # libsql_experimental requires a tuple
+    sql += " ORDER BY Rating"
+    if limit is not None:
+        sql += " LIMIT ? OFFSET ?"
+        params += [limit, offset]
+    rows = fetch_all(sql, tuple(params))
     return rows

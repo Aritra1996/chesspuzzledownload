@@ -71,6 +71,20 @@ def puzzle_grid(puzzles: list) -> Div:
     return Div(*[puzzle_card(row) for row in puzzles], cls="puzzle-grid")
 
 
+def pagination_bar(page: int, total_pages: int,
+                   theme: str, min_rating: int, max_rating: int) -> Div:
+    def page_href(p: int) -> str:
+        return f"/puzzles?theme={theme}&min_rating={min_rating}&max_rating={max_rating}&page={p}"
+    prev_attrs = {"href": page_href(page - 1)} if page > 1 else {"aria_disabled": "true"}
+    next_attrs = {"href": page_href(page + 1)} if page < total_pages else {"aria_disabled": "true"}
+    return Div(
+        A("← Prev", **prev_attrs, cls="btn btn-outline"),
+        Span(f"Page {page} of {total_pages}"),
+        A("Next →", **next_attrs, cls="btn btn-outline"),
+        cls="pagination",
+    )
+
+
 def css_link() -> Link:
     return Link(rel="stylesheet", href="/static/styles.css")
 

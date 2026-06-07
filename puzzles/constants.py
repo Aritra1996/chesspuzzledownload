@@ -34,8 +34,8 @@ RATING_SYMBOL     = "*"     # latin-1-safe replacement for the star glyph
 THEMES_MAX_CHARS          = 72
 THEMES_MAX_CHARS_SOLUTION = 90
 
-# ── PDF download limit ───────────────────────────────────────────────────────
-MAX_PDF_PUZZLES = 20
+# ── Display pagination ───────────────────────────────────────────────────────
+PAGE_SIZE = 24
 
 # ── Separator line ───────────────────────────────────────────────────────────
 SEPARATOR_COLOR = (200, 200, 200)   # RGB grey
