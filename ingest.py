@@ -10,6 +10,7 @@ load_dotenv()  # reads .env into environment variables
 
 TURSO_DB_URL     = os.getenv("TURSO_DB_URL")
 TURSO_AUTH_TOKEN = os.getenv("TURSO_AUTH_TOKEN")
+HF_TOKEN         = os.getenv("HF_TOKEN")
 
 # Safety check — fail loudly if credentials are missing
 if not TURSO_DB_URL or not TURSO_AUTH_TOKEN:
@@ -41,34 +42,32 @@ cursor.execute("CREATE INDEX IF NOT EXISTS idx_themes ON puzzles (Themes)")
 conn.commit()
 
 print("🔄 Loading dataset (streaming)...")
-ds = load_dataset("Lichess/chess-puzzles", split="train", streaming=True)
+ds = load_dataset("Lichess/chess-puzzles", split="train", streaming=True, token=HF_TOKEN)
 
-batch      = []
-TEST_LIMIT = 1000
+batch = []
+count = 0
 
 UPSERT_SQL = """
     INSERT OR REPLACE INTO puzzles (PuzzleId, FEN, Moves, Rating, Themes, OpeningTags)
     VALUES (?, ?, ?, ?, ?, ?)
 """
 
-print(f"🚀 Pushing {TEST_LIMIT} test rows to Turso...")
-for i, row in enumerate(ds):
-    if i >= TEST_LIMIT:
-        break
-
+print("🚀 Pushing all puzzles to Turso...")
+for row in ds:
     batch.append((
         to_str(row["PuzzleId"]),
         to_str(row["FEN"]),
-        to_str(row["Moves"]),        # ✅ ["e2e4", "d7d5"] → "e2e4 d7d5"
+        to_str(row["Moves"]),
         int(row["Rating"]),
-        to_str(row["Themes"]),       # ✅ ["fork", "mate"] → "fork mate"
-        to_str(row["OpeningTags"]),  # ✅ [] → ""
+        to_str(row["Themes"]),
+        to_str(row["OpeningTags"]),
     ))
+    count += 1
 
     if len(batch) == 500:
         cursor.executemany(UPSERT_SQL, batch)
         conn.commit()
-        print(f"✅ Inserted {i + 1} rows...")
+        print(f"✅ Inserted {count} rows...")
         batch = []
 
 if batch:
