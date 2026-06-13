@@ -5,7 +5,7 @@ from fasthtml.common import *
 from starlette.responses import Response
 
 from app import rt
-from puzzles.constants import PAGE_SIZE
+from puzzles.pdf.constants import PAGE_SIZE
 from puzzles.data.queries import count_puzzles, query_puzzles
 from puzzles.pdf.generate import generate_puzzle_pdf, generate_solutions_pdf
 from puzzles.data.state import RATING_MAX, RATING_MIN
