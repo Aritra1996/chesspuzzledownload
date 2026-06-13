@@ -1,4 +1,5 @@
 from dotenv import load_dotenv
+import json
 import os
 
 
@@ -41,11 +42,21 @@ cursor.execute("CREATE INDEX IF NOT EXISTS idx_rating ON puzzles (Rating)")
 cursor.execute("CREATE INDEX IF NOT EXISTS idx_themes ON puzzles (Themes)")
 conn.commit()
 
+PROGRESS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ingest_progress.json")
+resume_offset = 0
+if os.path.exists(PROGRESS_FILE):
+    with open(PROGRESS_FILE) as f:
+        resume_offset = json.load(f).get("offset", 0)
+if resume_offset:
+    print(f"▶️  Resuming from offset {resume_offset}...")
+
 print("🔄 Loading dataset (streaming)...")
 ds = load_dataset("Lichess/chess-puzzles", split="train", streaming=True, token=HF_TOKEN)
+if resume_offset:
+    ds = ds.skip(resume_offset)
 
 batch = []
-count = 0
+count = resume_offset
 
 UPSERT_SQL = """
     INSERT OR REPLACE INTO puzzles (PuzzleId, FEN, Moves, Rating, Themes, OpeningTags)
@@ -67,6 +78,8 @@ for row in ds:
     if len(batch) == 500:
         cursor.executemany(UPSERT_SQL, batch)
         conn.commit()
+        with open(PROGRESS_FILE, "w") as f:
+            json.dump({"offset": count}, f)
         print(f"✅ Inserted {count} rows...")
         batch = []
 
@@ -75,5 +88,7 @@ if batch:
     conn.commit()
 
 conn.close()
-print("🎉 Test ingestion complete!")
-os._exit(0)   # ✅ hard exit — skips Python's GC/shutdown, kills dangling threads cleanly
+if os.path.exists(PROGRESS_FILE):
+    os.remove(PROGRESS_FILE)
+print("🎉 Ingestion complete!")
+os._exit(0)   # hard exit — skips Python's GC/shutdown, kills dangling threads cleanly
