@@ -1,4 +1,4 @@
-from puzzles.db import fetch_rating_bounds, fetch_unique_openings, fetch_unique_themes
+from puzzles.data.queries import fetch_rating_bounds, fetch_unique_openings, fetch_unique_themes
 
 
 ALL_THEMES:   list[str] = fetch_unique_themes()

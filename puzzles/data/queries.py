@@ -1,4 +1,4 @@
-from core.db import fetch_all, fetch_one
+from core.turso import fetch_all, fetch_one
 
 
 def fetch_unique_themes() -> list[str]:

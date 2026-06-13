@@ -6,9 +6,9 @@ from starlette.responses import Response
 
 from app import rt
 from puzzles.constants import PAGE_SIZE
-from puzzles.db import count_puzzles, query_puzzles
-from puzzles.pdf import generate_puzzle_pdf, generate_solutions_pdf
-from puzzles.state import RATING_MAX, RATING_MIN
+from puzzles.data.queries import count_puzzles, query_puzzles
+from puzzles.pdf.generate import generate_puzzle_pdf, generate_solutions_pdf
+from puzzles.data.state import RATING_MAX, RATING_MIN
 from puzzles.validators import sanitise_rating
 from puzzles.views import (css_link, empty_state, filter_bar, meta_row,
                             puzzle_css_link, puzzle_section)

@@ -1,4 +1,4 @@
-from puzzles.state import RATING_MIN, RATING_MAX
+from puzzles.data.state import RATING_MIN, RATING_MAX
 
 
 def sanitise_rating(min_rating: int, max_rating: int) -> tuple[int, int]:

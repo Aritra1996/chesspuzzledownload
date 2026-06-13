@@ -2,9 +2,9 @@ import chess
 import chess.svg
 from fasthtml.common import *
 
-from puzzles.chess_utils import puzzle_position
-from puzzles.constants import PDF_BTN_REENABLE_MS
-from puzzles.state import ALL_OPENINGS, ALL_THEMES, RATING_MIN, RATING_MAX
+from puzzles.chess import puzzle_position
+from puzzles.pdf.constants import PDF_BTN_REENABLE_MS
+from puzzles.data.state import ALL_OPENINGS, ALL_THEMES, RATING_MIN, RATING_MAX
 
 
 def theme_select(current: str) -> Select:

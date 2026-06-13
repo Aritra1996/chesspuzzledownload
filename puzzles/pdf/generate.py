@@ -4,8 +4,8 @@ import chess
 import chess.svg
 from fpdf import FPDF
 
-from puzzles.chess_utils import puzzle_position, uci_to_san_sequence
-from puzzles.constants import (
+from puzzles.chess import puzzle_position, uci_to_san_sequence
+from puzzles.pdf.constants import (
     PAGE_W, PAGE_H,
     BOARD_W, BOARD_SVG_SIZE, X_BOARD,
     PUZZLES_PER_PAGE,
