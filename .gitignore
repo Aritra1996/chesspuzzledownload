@@ -15,3 +15,6 @@ wheels/
 # FastHTML session key — never commit
 .sesskey
 .vercel
+
+# Ingest resume state — local only
+ingest_progress.json
