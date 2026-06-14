@@ -1,3 +1,4 @@
+from constants import PUZZLE_CAP as CAP, RATING_DEFAULT_MIN, RATING_DEFAULT_MAX
 from core.turso import fetch_all, fetch_one
 
 
@@ -23,7 +24,7 @@ def fetch_unique_openings() -> list[str]:
 def fetch_rating_bounds() -> tuple[int, int]:
     sql = "SELECT MIN(Rating), MAX(Rating) FROM puzzles"
     lo, hi = fetch_one(sql)
-    return (lo or 0, hi or 3000)
+    return (lo or RATING_DEFAULT_MIN, hi or RATING_DEFAULT_MAX)
  
  
 def count_puzzles(theme: str, opening: str, min_r: int, max_r: int) -> int:
@@ -37,9 +38,6 @@ def count_puzzles(theme: str, opening: str, min_r: int, max_r: int) -> int:
         params.append(opening)
     (count,) = fetch_one(sql, tuple(params))
     return count
-
-
-CAP = 100
 
 
 def query_puzzles(theme: str, opening: str, min_r: int, max_r: int,

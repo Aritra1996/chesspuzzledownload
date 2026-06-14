@@ -117,13 +117,15 @@ def loading_indicator() -> Div:
 
 _HISTORY_JS = """
 (function () {
+  var HISTORY_MAX_ROWS = 5;
+
   document.body.addEventListener('htmx:afterSwap', function (e) {
     if (e.detail.target.id !== 'results-tbody') return;
     document.getElementById('results-wrapper').classList.remove('hidden');
 
-    // Auto-evict oldest row (bottom) when more than 5 exist
+    // Auto-evict oldest row (bottom) when more than HISTORY_MAX_ROWS exist
     var rows = document.querySelectorAll('#results-tbody tr');
-    if (rows.length > 5) {
+    if (rows.length > HISTORY_MAX_ROWS) {
       var oldest = rows[rows.length - 1];
       oldest.style.transition = 'opacity 0.28s ease, transform 0.28s ease';
       oldest.style.opacity = '0';

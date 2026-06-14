@@ -4,6 +4,7 @@ import chess
 import chess.svg
 from fpdf import FPDF
 
+from constants import RATING_DEFAULT_MIN, RATING_DEFAULT_MAX
 from puzzles.chess import puzzle_position, uci_to_san_sequence
 from puzzles.pdf.constants import (
     PAGE_W, PAGE_H,
@@ -59,7 +60,7 @@ class _BasePDF(FPDF):
 
 
 def generate_puzzle_pdf(puzzles: list, theme: str = "", opening: str = "",
-                        min_rating: int = 0, max_rating: int = 3000) -> bytes:
+                        min_rating: int = RATING_DEFAULT_MIN, max_rating: int = RATING_DEFAULT_MAX) -> bytes:
     """
     Puzzle PDF — 2 puzzles per A4 page.
     Dark header band on every page; all card body content on white background.
@@ -128,7 +129,7 @@ def generate_puzzle_pdf(puzzles: list, theme: str = "", opening: str = "",
 
 
 def generate_solutions_pdf(puzzles: list, theme: str = "", opening: str = "",
-                           min_rating: int = 0, max_rating: int = 3000) -> bytes:
+                           min_rating: int = RATING_DEFAULT_MIN, max_rating: int = RATING_DEFAULT_MAX) -> bytes:
     """
     Solutions PDF — text only, no boards.
     Dark header band on every page; all entry content on white background.

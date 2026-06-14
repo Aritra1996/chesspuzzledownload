@@ -1,7 +1,6 @@
 from collections import OrderedDict
 
-_MAX_ENTRIES = 5
-_MAX_PUZZLES = 100
+from constants import CACHE_MAX_ENTRIES, PUZZLE_CAP
 
 _store: OrderedDict[str, list] = OrderedDict()
 
@@ -14,12 +13,12 @@ def get(row_id: str) -> list | None:
 
 
 def put(row_id: str, puzzles: list) -> None:
-    if len(puzzles) > _MAX_PUZZLES:
+    if len(puzzles) > PUZZLE_CAP:
         return
     if row_id in _store:
         _store.move_to_end(row_id)
     _store[row_id] = puzzles
-    while len(_store) > _MAX_ENTRIES:
+    while len(_store) > CACHE_MAX_ENTRIES:
         _store.popitem(last=False)
 
 
