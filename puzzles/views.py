@@ -197,6 +197,24 @@ def load_history_row_pending(theme: str, opening: str, min_rating: int,
     )
 
 
+def load_history_status_cell_counting(total: int, qs: str, row_id: str):
+    data_url = f"/puzzles/load/data?{qs}&row_id={row_id}"
+    return (
+        Td(
+            f"{total:,} puzzles found",
+            Span(" — getting puzzles…", cls="status-pending"),
+            id=f"status-{row_id}",
+            cls="status-cell",
+            hx_get=data_url,
+            hx_trigger="load",
+            hx_target=f"#status-{row_id}",
+            hx_swap="outerHTML",
+            data_label="Status",
+        ),
+        Td(id=f"dl-{row_id}", hx_swap_oob="true", data_label="Download"),
+    )
+
+
 def load_history_status_cell(status_text: str, has_results: bool,
                               qs: str, row_id: str, too_many: bool = False):
     if too_many:

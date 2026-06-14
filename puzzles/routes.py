@@ -6,13 +6,13 @@ from starlette.responses import Response
 
 from app import rt
 import core.cache as cache
-from puzzles.data.queries import query_puzzles, query_puzzles_capped
+from puzzles.data.queries import CAP, count_puzzles, query_puzzles
 from puzzles.pdf.generate import generate_puzzle_pdf, generate_solutions_pdf
 from puzzles.data.state import RATING_MAX, RATING_MIN
 from puzzles.validators import sanitise_rating
 from puzzles.views import (css_link, filter_bar, load_history_row_pending,
-                            load_history_status_cell, load_history_table,
-                            loading_indicator, puzzle_css_link)
+                            load_history_status_cell, load_history_status_cell_counting,
+                            load_history_table, loading_indicator, puzzle_css_link)
 
 
 @rt("/puzzles")
@@ -41,20 +41,27 @@ def get(theme: str = "", opening: str = "",
     min_rating, max_rating = sanitise_rating(min_rating, max_rating)
     qs = urlencode({"theme": theme, "opening": opening,
                     "min_rating": min_rating, "max_rating": max_rating})
-
-    puzzles, total = query_puzzles_capped(theme, opening, min_rating, max_rating)
+    total = count_puzzles(theme, opening, min_rating, max_rating)
 
     if total == 0:
         return load_history_status_cell("No puzzles found for these filters",
                                         has_results=False, qs=qs, row_id=row_id)
+    if total > CAP:
+        return load_history_status_cell(f"{total:,} puzzles found — too many to download",
+                                        has_results=False, qs=qs, row_id=row_id, too_many=True)
 
-    if total > 100:
-        status = f"{total:,} puzzles found — too many to download"
-        return load_history_status_cell(status, has_results=False, qs=qs,
-                                        row_id=row_id, too_many=True)
+    return load_history_status_cell_counting(total, qs, row_id)
 
+
+@rt("/puzzles/load/data")
+def get(theme: str = "", opening: str = "",
+        min_rating: int = RATING_MIN, max_rating: int = RATING_MAX, row_id: str = ""):
+    min_rating, max_rating = sanitise_rating(min_rating, max_rating)
+    qs = urlencode({"theme": theme, "opening": opening,
+                    "min_rating": min_rating, "max_rating": max_rating})
+    puzzles = query_puzzles(theme, opening, min_rating, max_rating, limit=CAP)
     cache.put(row_id, puzzles)
-    return load_history_status_cell(f"{total:,} puzzles found",
+    return load_history_status_cell(f"{len(puzzles):,} puzzles found",
                                     has_results=True, qs=qs, row_id=row_id)
 
 
