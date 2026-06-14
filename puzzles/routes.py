@@ -48,7 +48,7 @@ def get(theme: str = "", opening: str = "",
         return load_history_status_cell("No puzzles found for these filters",
                                         has_results=False, qs=qs, row_id=row_id)
 
-    if total > 1_000:
+    if total > 100:
         status = f"{total:,} puzzles found — too many to download"
         return load_history_status_cell(status, has_results=False, qs=qs,
                                         row_id=row_id, too_many=True)
@@ -65,7 +65,7 @@ def download_puzzles(theme: str = "", opening: str = "",
     min_rating, max_rating = sanitise_rating(min_rating, max_rating)
     puzzles = cache.get(row_id) if row_id else None
     if puzzles is None:
-        puzzles = query_puzzles(theme, opening, min_rating, max_rating, limit=1_000)
+        puzzles = query_puzzles(theme, opening, min_rating, max_rating, limit=100)
     pdf_bytes = generate_puzzle_pdf(puzzles, theme, opening, min_rating, max_rating)
     return Response(
         content=pdf_bytes,
@@ -81,7 +81,7 @@ def download_solutions(theme: str = "", opening: str = "",
     min_rating, max_rating = sanitise_rating(min_rating, max_rating)
     puzzles = cache.get(row_id) if row_id else None
     if puzzles is None:
-        puzzles = query_puzzles(theme, opening, min_rating, max_rating, limit=1_000)
+        puzzles = query_puzzles(theme, opening, min_rating, max_rating, limit=100)
     pdf_bytes = generate_solutions_pdf(puzzles, theme, opening, min_rating, max_rating)
     return Response(
         content=pdf_bytes,

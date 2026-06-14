@@ -1,7 +1,7 @@
 from collections import OrderedDict
 
 _MAX_ENTRIES = 5
-_MAX_PUZZLES = 1_000
+_MAX_PUZZLES = 100
 
 _store: OrderedDict[str, list] = OrderedDict()
 

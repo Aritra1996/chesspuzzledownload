@@ -201,7 +201,7 @@ def load_history_status_cell(status_text: str, has_results: bool,
                               qs: str, row_id: str, too_many: bool = False):
     if too_many:
         dl_content = P(
-            "Select a theme or opening, or tighten the rating range to get ≤1,000 results",
+            "Select a theme or opening, or tighten the rating range to get ≤100 results",
             cls="dl-hint",
         )
         status_cls = "status-too-many"

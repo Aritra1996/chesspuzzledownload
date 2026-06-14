@@ -39,7 +39,7 @@ def count_puzzles(theme: str, opening: str, min_r: int, max_r: int) -> int:
     return count
 
 
-_CAP = 1_000
+_CAP = 100
 
 
 def query_puzzles_capped(theme: str, opening: str,
