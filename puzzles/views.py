@@ -89,14 +89,16 @@ def filter_bar() -> Form:
     if (n < +minS.value) {{ minS.value = n; minI.value = n; }}
   }});
 
-  // On blur: snap to valid range; empty min → LO, empty max → HI
+  // On blur: cross-validate against the other slider; empty min → LO, empty max → HI
   minI.addEventListener('blur', function() {{
     var n = +minI.value;
-    minI.value = minS.value = isNaN(n) ? LO : clamp(n, LO, HI);
+    var hi = Math.min(HI, +maxS.value);
+    minI.value = minS.value = isNaN(n) ? LO : clamp(n, LO, hi);
   }});
   maxI.addEventListener('blur', function() {{
     var n = +maxI.value;
-    maxI.value = maxS.value = isNaN(n) ? HI : clamp(n, LO, HI);
+    var lo = Math.max(LO, +minS.value);
+    maxI.value = maxS.value = isNaN(n) ? HI : clamp(n, lo, HI);
   }});
 }})();
 """),
