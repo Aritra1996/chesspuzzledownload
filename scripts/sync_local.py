@@ -26,6 +26,22 @@ conn.execute("""
         OpeningTags TEXT
     )
 """)
+conn.execute("""
+    CREATE TABLE IF NOT EXISTS puzzle_themes (
+        puzzle_id TEXT NOT NULL,
+        theme     TEXT NOT NULL,
+        PRIMARY KEY (puzzle_id, theme)
+    )
+""")
+conn.execute("CREATE INDEX IF NOT EXISTS idx_pt_theme ON puzzle_themes (theme)")
+conn.execute("""
+    CREATE TABLE IF NOT EXISTS puzzle_openings (
+        puzzle_id TEXT NOT NULL,
+        opening   TEXT NOT NULL,
+        PRIMARY KEY (puzzle_id, opening)
+    )
+""")
+conn.execute("CREATE INDEX IF NOT EXISTS idx_po_opening ON puzzle_openings (opening)")
 
 
 def _collect_tokens(column: str) -> list[str]:
@@ -68,6 +84,14 @@ rows = turso_all(
 )
 conn.execute("DELETE FROM puzzles")
 conn.executemany("INSERT INTO puzzles VALUES (?,?,?,?,?,?)", rows)
+
+print("Syncing junction tables for local puzzles...")
+conn.execute("DELETE FROM puzzle_themes")
+conn.execute("DELETE FROM puzzle_openings")
+theme_rows   = [(r[0], t) for r in rows if r[4] for t in r[4].split()]
+opening_rows = [(r[0], o) for r in rows if r[5] for o in r[5].split()]
+conn.executemany("INSERT OR IGNORE INTO puzzle_themes (puzzle_id, theme) VALUES (?, ?)", theme_rows)
+conn.executemany("INSERT OR IGNORE INTO puzzle_openings (puzzle_id, opening) VALUES (?, ?)", opening_rows)
 
 conn.commit()
 conn.close()

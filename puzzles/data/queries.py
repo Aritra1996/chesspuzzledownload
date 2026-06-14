@@ -28,35 +28,60 @@ def fetch_rating_bounds() -> tuple[int, int]:
  
  
 def count_puzzles(theme: str, opening: str, min_r: int, max_r: int) -> int:
-    sql = "SELECT COUNT(*) FROM puzzles WHERE Rating BETWEEN ? AND ?"
-    params: list = [min_r, max_r]
-    if theme:
-        sql += " AND instr(' ' || Themes || ' ', ' ' || ? || ' ') > 0"
-        params.append(theme)
-    if opening:
-        sql += " AND instr(' ' || OpeningTags || ' ', ' ' || ? || ' ') > 0"
-        params.append(opening)
-    (count,) = fetch_one(sql, tuple(params))
+    if theme and opening:
+        sql = """SELECT COUNT(*) FROM puzzles p
+                 JOIN puzzle_themes pt ON p.PuzzleId = pt.puzzle_id
+                 JOIN puzzle_openings po ON p.PuzzleId = po.puzzle_id
+                 WHERE pt.theme = ? AND po.opening = ?
+                 AND p.Rating BETWEEN ? AND ?"""
+        params = (theme, opening, min_r, max_r)
+    elif theme:
+        sql = """SELECT COUNT(*) FROM puzzles p
+                 JOIN puzzle_themes pt ON p.PuzzleId = pt.puzzle_id
+                 WHERE pt.theme = ? AND p.Rating BETWEEN ? AND ?"""
+        params = (theme, min_r, max_r)
+    elif opening:
+        sql = """SELECT COUNT(*) FROM puzzles p
+                 JOIN puzzle_openings po ON p.PuzzleId = po.puzzle_id
+                 WHERE po.opening = ? AND p.Rating BETWEEN ? AND ?"""
+        params = (opening, min_r, max_r)
+    else:
+        sql = "SELECT COUNT(*) FROM puzzles WHERE Rating BETWEEN ? AND ?"
+        params = (min_r, max_r)
+    (count,) = fetch_one(sql, params)
     return count
 
 
 def query_puzzles(theme: str, opening: str, min_r: int, max_r: int,
                   limit: int | None = None, offset: int = 0) -> list:
-    sql = """
-        SELECT PuzzleId, FEN, Moves, Rating, Themes, OpeningTags
-        FROM puzzles
-        WHERE Rating BETWEEN ? AND ?
-    """
-    params: list = [min_r, max_r]
-    if theme:
-        sql += " AND instr(' ' || Themes || ' ', ' ' || ? || ' ') > 0"
-        params.append(theme)
-    if opening:
-        sql += " AND instr(' ' || OpeningTags || ' ', ' ' || ? || ' ') > 0"
-        params.append(opening)
-    sql += " ORDER BY Rating"
+    select = "SELECT p.PuzzleId, p.FEN, p.Moves, p.Rating, p.Themes, p.OpeningTags FROM puzzles p"
+    order  = " ORDER BY p.Rating"
+    page   = " LIMIT ? OFFSET ?" if limit is not None else ""
+
+    if theme and opening:
+        sql = (select
+               + " JOIN puzzle_themes pt ON p.PuzzleId = pt.puzzle_id"
+               + " JOIN puzzle_openings po ON p.PuzzleId = po.puzzle_id"
+               + " WHERE pt.theme = ? AND po.opening = ? AND p.Rating BETWEEN ? AND ?"
+               + order + page)
+        params: list = [theme, opening, min_r, max_r]
+    elif theme:
+        sql = (select
+               + " JOIN puzzle_themes pt ON p.PuzzleId = pt.puzzle_id"
+               + " WHERE pt.theme = ? AND p.Rating BETWEEN ? AND ?"
+               + order + page)
+        params = [theme, min_r, max_r]
+    elif opening:
+        sql = (select
+               + " JOIN puzzle_openings po ON p.PuzzleId = po.puzzle_id"
+               + " WHERE po.opening = ? AND p.Rating BETWEEN ? AND ?"
+               + order + page)
+        params = [opening, min_r, max_r]
+    else:
+        sql = ("SELECT PuzzleId, FEN, Moves, Rating, Themes, OpeningTags FROM puzzles"
+               + " WHERE Rating BETWEEN ? AND ?" + order + page)
+        params = [min_r, max_r]
+
     if limit is not None:
-        sql += " LIMIT ? OFFSET ?"
         params += [limit, offset]
-    rows = fetch_all(sql, tuple(params))
-    return rows
+    return fetch_all(sql, tuple(params))
