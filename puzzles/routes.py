@@ -19,6 +19,7 @@ from puzzles.views import (css_link, filter_bar, load_history_row_pending,
 @rt("/puzzles")
 def get():
     return (
+        Title("Browse Puzzles · Chess Puzzles"),
         css_link(), puzzle_css_link(),
         filter_bar(),
         loading_indicator(),

@@ -21,6 +21,7 @@ def index():
     rating_range  = f"{RATING_MIN} – {RATING_MAX}"
 
     return (
+        Title("Chess Puzzles"),
         css_link(),
         Main(
             # ── Hero ────────────────────────────────────────────────────────
