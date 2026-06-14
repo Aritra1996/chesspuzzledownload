@@ -44,8 +44,7 @@ _CAP = 1_000
 
 def query_puzzles_capped(theme: str, opening: str,
                          min_r: int, max_r: int) -> tuple[list, int]:
-    """Single Turso round trip. Returns (puzzles, total).
-    If total > _CAP, puzzles is [] so caller can warn without fetching all rows."""
+    """Returns (puzzles, total). If total > _CAP, puzzles is [] and caller shows the count."""
     base = "Rating BETWEEN ? AND ?"
     params: list = [min_r, max_r]
     if theme:
@@ -55,24 +54,21 @@ def query_puzzles_capped(theme: str, opening: str,
         base += " AND instr(' ' || OpeningTags || ' ', ' ' || ? || ' ') > 0"
         params.append(opening)
 
-    sql = f"""
-        WITH cnt AS (SELECT COUNT(*) AS n FROM puzzles WHERE {base})
-        SELECT p.PuzzleId, p.FEN, p.Moves, p.Rating, p.Themes, p.OpeningTags, cnt.n
-        FROM puzzles p, cnt
-        WHERE p.{base}
-        ORDER BY p.Rating
-        LIMIT ?
-    """
-    rows = fetch_all(sql, tuple(params + params + [_CAP + 1]))
+    rows = fetch_all(
+        f"SELECT PuzzleId, FEN, Moves, Rating, Themes, OpeningTags"
+        f" FROM puzzles WHERE {base} ORDER BY Rating LIMIT ?",
+        tuple(params + [_CAP + 1]),
+    )
 
     if not rows:
         return [], 0
 
-    total = rows[0][-1]
-    if len(rows) > _CAP:
-        return [], total
+    if len(rows) <= _CAP:
+        return list(rows), len(rows)
 
-    return [r[:-1] for r in rows], total
+    # Over cap: second query for exact count
+    (total,) = fetch_one(f"SELECT COUNT(*) FROM puzzles WHERE {base}", tuple(params))
+    return [], total
 
 
 def query_puzzles(theme: str, opening: str, min_r: int, max_r: int,
