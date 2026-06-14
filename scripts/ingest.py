@@ -44,18 +44,22 @@ cursor.execute("""
     CREATE TABLE IF NOT EXISTS puzzle_themes (
         puzzle_id TEXT NOT NULL,
         theme     TEXT NOT NULL,
+        rating    INTEGER,
         PRIMARY KEY (puzzle_id, theme)
     )
 """)
 cursor.execute("CREATE INDEX IF NOT EXISTS idx_pt_theme ON puzzle_themes (theme)")
+cursor.execute("CREATE INDEX IF NOT EXISTS idx_pt_theme_rating ON puzzle_themes (theme, rating)")
 cursor.execute("""
     CREATE TABLE IF NOT EXISTS puzzle_openings (
         puzzle_id TEXT NOT NULL,
         opening   TEXT NOT NULL,
+        rating    INTEGER,
         PRIMARY KEY (puzzle_id, opening)
     )
 """)
 cursor.execute("CREATE INDEX IF NOT EXISTS idx_po_opening ON puzzle_openings (opening)")
+cursor.execute("CREATE INDEX IF NOT EXISTS idx_po_opening_rating ON puzzle_openings (opening, rating)")
 conn.commit()
 
 PROGRESS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ingest_progress.json")
@@ -78,8 +82,8 @@ UPSERT_SQL = """
     INSERT OR REPLACE INTO puzzles (PuzzleId, FEN, Moves, Rating, Themes, OpeningTags)
     VALUES (?, ?, ?, ?, ?, ?)
 """
-THEME_SQL   = "INSERT OR IGNORE INTO puzzle_themes (puzzle_id, theme) VALUES (?, ?)"
-OPENING_SQL = "INSERT OR IGNORE INTO puzzle_openings (puzzle_id, opening) VALUES (?, ?)"
+THEME_SQL   = "INSERT OR IGNORE INTO puzzle_themes (puzzle_id, theme, rating) VALUES (?, ?, ?)"
+OPENING_SQL = "INSERT OR IGNORE INTO puzzle_openings (puzzle_id, opening, rating) VALUES (?, ?, ?)"
 
 print("🚀 Pushing all puzzles to Turso...")
 for row in ds:
@@ -95,8 +99,8 @@ for row in ds:
 
     if len(batch) == 500:
         cursor.executemany(UPSERT_SQL, batch)
-        theme_rows   = [(r[0], t) for r in batch if r[4] for t in r[4].split()]
-        opening_rows = [(r[0], o) for r in batch if r[5] for o in r[5].split()]
+        theme_rows   = [(r[0], t, r[3]) for r in batch if r[4] for t in r[4].split()]
+        opening_rows = [(r[0], o, r[3]) for r in batch if r[5] for o in r[5].split()]
         if theme_rows:
             cursor.executemany(THEME_SQL, theme_rows)
         if opening_rows:
@@ -109,8 +113,8 @@ for row in ds:
 
 if batch:
     cursor.executemany(UPSERT_SQL, batch)
-    theme_rows   = [(r[0], t) for r in batch if r[4] for t in r[4].split()]
-    opening_rows = [(r[0], o) for r in batch if r[5] for o in r[5].split()]
+    theme_rows   = [(r[0], t, r[3]) for r in batch if r[4] for t in r[4].split()]
+    opening_rows = [(r[0], o, r[3]) for r in batch if r[5] for o in r[5].split()]
     if theme_rows:
         cursor.executemany(THEME_SQL, theme_rows)
     if opening_rows:

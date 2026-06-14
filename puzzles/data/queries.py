@@ -35,32 +35,34 @@ def query_puzzles(theme: str, opening: str, min_r: int, max_r: int,
     if n_puzzles is not None:
         return _query_puzzles_sampled(theme, opening, min_r, max_r, n_puzzles)
 
-    select = "SELECT p.PuzzleId, p.FEN, p.Moves, p.Rating, p.Themes, p.OpeningTags FROM puzzles p"
-    order  = " ORDER BY p.Rating"
-    page   = " LIMIT ? OFFSET ?" if limit is not None else ""
+    order = " ORDER BY Rating"
+    page  = " LIMIT ? OFFSET ?" if limit is not None else ""
 
     if theme and opening:
-        sql = (select
-               + " JOIN puzzle_themes pt ON p.PuzzleId = pt.puzzle_id"
-               + " JOIN puzzle_openings po ON p.PuzzleId = po.puzzle_id"
-               + " WHERE pt.theme = ? AND po.opening = ? AND p.Rating BETWEEN ? AND ?"
+        sql = ("SELECT p.PuzzleId, p.FEN, p.Moves, p.Rating, p.Themes, p.OpeningTags"
+               " FROM puzzle_themes pt"
+               " JOIN puzzle_openings po ON pt.puzzle_id = po.puzzle_id"
+               " JOIN puzzles p ON p.PuzzleId = pt.puzzle_id"
+               " WHERE pt.theme = ? AND po.opening = ? AND pt.rating BETWEEN ? AND ?"
                + order + page)
         params: list = [theme, opening, min_r, max_r]
     elif theme:
-        sql = (select
-               + " JOIN puzzle_themes pt ON p.PuzzleId = pt.puzzle_id"
-               + " WHERE pt.theme = ? AND p.Rating BETWEEN ? AND ?"
+        sql = ("SELECT p.PuzzleId, p.FEN, p.Moves, p.Rating, p.Themes, p.OpeningTags"
+               " FROM puzzle_themes pt"
+               " JOIN puzzles p ON p.PuzzleId = pt.puzzle_id"
+               " WHERE pt.theme = ? AND pt.rating BETWEEN ? AND ?"
                + order + page)
         params = [theme, min_r, max_r]
     elif opening:
-        sql = (select
-               + " JOIN puzzle_openings po ON p.PuzzleId = po.puzzle_id"
-               + " WHERE po.opening = ? AND p.Rating BETWEEN ? AND ?"
+        sql = ("SELECT p.PuzzleId, p.FEN, p.Moves, p.Rating, p.Themes, p.OpeningTags"
+               " FROM puzzle_openings po"
+               " JOIN puzzles p ON p.PuzzleId = po.puzzle_id"
+               " WHERE po.opening = ? AND po.rating BETWEEN ? AND ?"
                + order + page)
         params = [opening, min_r, max_r]
     else:
         sql = ("SELECT PuzzleId, FEN, Moves, Rating, Themes, OpeningTags FROM puzzles"
-               + " WHERE Rating BETWEEN ? AND ?" + order + page)
+               " WHERE Rating BETWEEN ? AND ?" + order + page)
         params = [min_r, max_r]
 
     if limit is not None:
@@ -103,25 +105,28 @@ def _query_puzzles_sampled(theme: str, opening: str, min_r: int, max_r: int,
 
 
 def _bucket_select(theme: str, opening: str, lo: int, hi: int) -> tuple[str, tuple]:
-    base = ("SELECT p.PuzzleId, p.FEN, p.Moves, p.Rating, p.Themes, p.OpeningTags"
-            " FROM puzzles p")
-    rating = f"p.Rating BETWEEN {lo} AND {hi}"
-    order = " ORDER BY p.Rating LIMIT 1"
+    cols = "SELECT p.PuzzleId, p.FEN, p.Moves, p.Rating, p.Themes, p.OpeningTags"
     if theme and opening:
-        return (base
-                + " JOIN puzzle_themes pt ON p.PuzzleId = pt.puzzle_id"
-                + " JOIN puzzle_openings po ON p.PuzzleId = po.puzzle_id"
-                + f" WHERE pt.theme = ? AND po.opening = ? AND {rating}" + order,
+        return (cols
+                + " FROM puzzle_themes pt"
+                + " JOIN puzzle_openings po ON pt.puzzle_id = po.puzzle_id"
+                + " JOIN puzzles p ON p.PuzzleId = pt.puzzle_id"
+                + f" WHERE pt.theme = ? AND po.opening = ? AND pt.rating BETWEEN {lo} AND {hi}"
+                + " ORDER BY pt.rating LIMIT 1",
                 (theme, opening))
     if theme:
-        return (base
-                + " JOIN puzzle_themes pt ON p.PuzzleId = pt.puzzle_id"
-                + f" WHERE pt.theme = ? AND {rating}" + order,
+        return (cols
+                + " FROM puzzle_themes pt"
+                + " JOIN puzzles p ON p.PuzzleId = pt.puzzle_id"
+                + f" WHERE pt.theme = ? AND pt.rating BETWEEN {lo} AND {hi}"
+                + " ORDER BY pt.rating LIMIT 1",
                 (theme,))
     if opening:
-        return (base
-                + " JOIN puzzle_openings po ON p.PuzzleId = po.puzzle_id"
-                + f" WHERE po.opening = ? AND {rating}" + order,
+        return (cols
+                + " FROM puzzle_openings po"
+                + " JOIN puzzles p ON p.PuzzleId = po.puzzle_id"
+                + f" WHERE po.opening = ? AND po.rating BETWEEN {lo} AND {hi}"
+                + " ORDER BY po.rating LIMIT 1",
                 (opening,))
     return (f"SELECT PuzzleId, FEN, Moves, Rating, Themes, OpeningTags"
             f" FROM puzzles WHERE Rating BETWEEN {lo} AND {hi} ORDER BY Rating LIMIT 1",
@@ -130,31 +135,34 @@ def _bucket_select(theme: str, opening: str, lo: int, hi: int) -> tuple[str, tup
 
 def _fill_up(theme: str, opening: str, min_r: int, max_r: int,
              need: int, found_ids: tuple) -> list:
-    not_in_p = (f" AND p.PuzzleId NOT IN ({','.join('?' * len(found_ids))})"
-                if found_ids else "")
+    not_in_pt = (f" AND pt.puzzle_id NOT IN ({','.join('?' * len(found_ids))})"
+                 if found_ids else "")
+    not_in_po = (f" AND po.puzzle_id NOT IN ({','.join('?' * len(found_ids))})"
+                 if found_ids else "")
     not_in = (f" AND PuzzleId NOT IN ({','.join('?' * len(found_ids))})"
               if found_ids else "")
-    base = ("SELECT p.PuzzleId, p.FEN, p.Moves, p.Rating, p.Themes, p.OpeningTags"
-            " FROM puzzles p")
-    tail = " ORDER BY p.Rating LIMIT ?"
+    cols = "SELECT p.PuzzleId, p.FEN, p.Moves, p.Rating, p.Themes, p.OpeningTags"
     if theme and opening:
-        sql = (base
-               + " JOIN puzzle_themes pt ON p.PuzzleId = pt.puzzle_id"
-               + " JOIN puzzle_openings po ON p.PuzzleId = po.puzzle_id"
-               + " WHERE pt.theme = ? AND po.opening = ? AND p.Rating BETWEEN ? AND ?"
-               + not_in_p + tail)
+        sql = (cols
+               + " FROM puzzle_themes pt"
+               + " JOIN puzzle_openings po ON pt.puzzle_id = po.puzzle_id"
+               + " JOIN puzzles p ON p.PuzzleId = pt.puzzle_id"
+               + " WHERE pt.theme = ? AND po.opening = ? AND pt.rating BETWEEN ? AND ?"
+               + not_in_pt + " ORDER BY pt.rating LIMIT ?")
         return fetch_all(sql, (theme, opening, min_r, max_r) + found_ids + (need,))
     if theme:
-        sql = (base
-               + " JOIN puzzle_themes pt ON p.PuzzleId = pt.puzzle_id"
-               + " WHERE pt.theme = ? AND p.Rating BETWEEN ? AND ?"
-               + not_in_p + tail)
+        sql = (cols
+               + " FROM puzzle_themes pt"
+               + " JOIN puzzles p ON p.PuzzleId = pt.puzzle_id"
+               + " WHERE pt.theme = ? AND pt.rating BETWEEN ? AND ?"
+               + not_in_pt + " ORDER BY pt.rating LIMIT ?")
         return fetch_all(sql, (theme, min_r, max_r) + found_ids + (need,))
     if opening:
-        sql = (base
-               + " JOIN puzzle_openings po ON p.PuzzleId = po.puzzle_id"
-               + " WHERE po.opening = ? AND p.Rating BETWEEN ? AND ?"
-               + not_in_p + tail)
+        sql = (cols
+               + " FROM puzzle_openings po"
+               + " JOIN puzzles p ON p.PuzzleId = po.puzzle_id"
+               + " WHERE po.opening = ? AND po.rating BETWEEN ? AND ?"
+               + not_in_po + " ORDER BY po.rating LIMIT ?")
         return fetch_all(sql, (opening, min_r, max_r) + found_ids + (need,))
     sql = ("SELECT PuzzleId, FEN, Moves, Rating, Themes, OpeningTags FROM puzzles"
            " WHERE Rating BETWEEN ? AND ?" + not_in + " ORDER BY Rating LIMIT ?")

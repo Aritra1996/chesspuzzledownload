@@ -30,18 +30,22 @@ conn.execute("""
     CREATE TABLE IF NOT EXISTS puzzle_themes (
         puzzle_id TEXT NOT NULL,
         theme     TEXT NOT NULL,
+        rating    INTEGER,
         PRIMARY KEY (puzzle_id, theme)
     )
 """)
 conn.execute("CREATE INDEX IF NOT EXISTS idx_pt_theme ON puzzle_themes (theme)")
+conn.execute("CREATE INDEX IF NOT EXISTS idx_pt_theme_rating ON puzzle_themes (theme, rating)")
 conn.execute("""
     CREATE TABLE IF NOT EXISTS puzzle_openings (
         puzzle_id TEXT NOT NULL,
         opening   TEXT NOT NULL,
+        rating    INTEGER,
         PRIMARY KEY (puzzle_id, opening)
     )
 """)
 conn.execute("CREATE INDEX IF NOT EXISTS idx_po_opening ON puzzle_openings (opening)")
+conn.execute("CREATE INDEX IF NOT EXISTS idx_po_opening_rating ON puzzle_openings (opening, rating)")
 
 
 def _collect_tokens(column: str) -> list[str]:
@@ -88,10 +92,10 @@ conn.executemany("INSERT INTO puzzles VALUES (?,?,?,?,?,?)", rows)
 print("Syncing junction tables for local puzzles...")
 conn.execute("DELETE FROM puzzle_themes")
 conn.execute("DELETE FROM puzzle_openings")
-theme_rows   = [(r[0], t) for r in rows if r[4] for t in r[4].split()]
-opening_rows = [(r[0], o) for r in rows if r[5] for o in r[5].split()]
-conn.executemany("INSERT OR IGNORE INTO puzzle_themes (puzzle_id, theme) VALUES (?, ?)", theme_rows)
-conn.executemany("INSERT OR IGNORE INTO puzzle_openings (puzzle_id, opening) VALUES (?, ?)", opening_rows)
+theme_rows   = [(r[0], t, r[3]) for r in rows if r[4] for t in r[4].split()]
+opening_rows = [(r[0], o, r[3]) for r in rows if r[5] for o in r[5].split()]
+conn.executemany("INSERT OR IGNORE INTO puzzle_themes (puzzle_id, theme, rating) VALUES (?, ?, ?)", theme_rows)
+conn.executemany("INSERT OR IGNORE INTO puzzle_openings (puzzle_id, opening, rating) VALUES (?, ?, ?)", opening_rows)
 
 conn.commit()
 conn.close()
