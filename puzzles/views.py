@@ -221,13 +221,13 @@ def load_history_row_pending(theme: str, opening: str, min_rating: int,
     parts = []
     if theme:   parts.append(theme)
     if opening: parts.append(opening)
-    parts.append(f"{min_rating}–{max_rating}")
+    parts.append(f"{min_rating} - {max_rating}")
     status_text = f"Sampling {n_puzzles} puzzles · {' · '.join(parts)}…"
     return Tr(
         Td(cls="col-num"),
         Td(theme or "All themes", data_label="Theme"),
         Td(opening or "All openings", data_label="Opening"),
-        Td(f"{min_rating}–{max_rating}", data_label="Rating"),
+        Td(f"{min_rating} - {max_rating}", data_label="Rating"),
         Td(
             Span(status_text, cls="status-pending"),
             id=f"status-{row_id}",

@@ -68,16 +68,19 @@ def query_puzzles(theme: str, opening: str, min_r: int, max_r: int,
     return fetch_all(sql, tuple(params))
 
 
+_MAX_CTES = 30  # stay below Turso/libsql's compound-select limit
+
 @lru_cache(maxsize=64)
 def _query_puzzles_sampled(theme: str, opening: str, min_r: int, max_r: int,
                             n: int) -> list:
-    bucket_size = (max_r - min_r) // n
+    n_ctes = min(n, _MAX_CTES)
+    bucket_size = (max_r - min_r) // n_ctes
     cte_defs: list[str] = []
     cte_refs: list[str] = []
     params: list = []
-    for i in range(n):
+    for i in range(n_ctes):
         lo = min_r + i * bucket_size
-        hi = (min_r + (i + 1) * bucket_size - 1) if i < n - 1 else max_r
+        hi = (min_r + (i + 1) * bucket_size - 1) if i < n_ctes - 1 else max_r
         sel, p = _bucket_select(theme, opening, lo, hi)
         cte_defs.append(f"b{i} AS ({sel})")
         cte_refs.append(f"SELECT * FROM b{i}")

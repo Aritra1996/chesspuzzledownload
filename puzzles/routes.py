@@ -52,9 +52,11 @@ def get(theme: str = "", opening: str = "",
     if not puzzles:
         return load_history_status_cell("No puzzles found for these filters",
                                         has_results=False, qs=qs, row_id=row_id)
+    found = len(puzzles)
+    status = (f"{found} of {n_puzzles} puzzles found"
+              if found < n_puzzles else f"{found} puzzles selected")
     cache.put(row_id, puzzles)
-    return load_history_status_cell(f"{len(puzzles):,} puzzles selected",
-                                    has_results=True, qs=qs, row_id=row_id)
+    return load_history_status_cell(status, has_results=True, qs=qs, row_id=row_id)
 
 
 @rt("/puzzles/download/puzzles")
