@@ -61,7 +61,7 @@ def filter_bar() -> Form:
   var maxI = document.getElementById('max-input');
   var LO = {RATING_MIN}, HI = {RATING_MAX};
 
-  function clamp(v) {{ return Math.max(LO, Math.min(v, HI)); }}
+  function clamp(v, lo, hi) {{ return Math.max(lo, Math.min(v, hi)); }}
 
   // Slider → number input (live)
   minS.addEventListener('input', function() {{
@@ -75,21 +75,29 @@ def filter_bar() -> Form:
     if (v < +minS.value) {{ minS.value = v; minI.value = v; }}
   }});
 
-  // Number input → slider (live, clamp + cross-validate)
+  // Number input → slider (live): only sync slider when value is complete and in range
   minI.addEventListener('input', function() {{
-    var v = clamp(+minI.value || LO);
-    minS.value = v;
-    if (v > +maxS.value) {{ maxS.value = v; maxI.value = v; }}
+    var n = +minI.value;
+    if (!minI.value || isNaN(n) || n < LO || n > HI) return;
+    minS.value = n;
+    if (n > +maxS.value) {{ maxS.value = n; maxI.value = n; }}
   }});
   maxI.addEventListener('input', function() {{
-    var v = clamp(+maxI.value || LO);
-    maxS.value = v;
-    if (v < +minS.value) {{ minS.value = v; minI.value = v; }}
+    var n = +maxI.value;
+    if (!maxI.value || isNaN(n) || n < LO || n > HI) return;
+    maxS.value = n;
+    if (n < +minS.value) {{ minS.value = n; minI.value = n; }}
   }});
 
-  // On blur: snap input to valid clamped value in case user left it mid-edit
-  minI.addEventListener('blur', function() {{ minI.value = clamp(+minI.value || LO); minS.value = minI.value; }});
-  maxI.addEventListener('blur', function() {{ maxI.value = clamp(+maxI.value || LO); maxS.value = maxI.value; }});
+  // On blur: snap to valid range; empty min → LO, empty max → HI
+  minI.addEventListener('blur', function() {{
+    var n = +minI.value;
+    minI.value = minS.value = isNaN(n) ? LO : clamp(n, LO, HI);
+  }});
+  maxI.addEventListener('blur', function() {{
+    var n = +maxI.value;
+    maxI.value = maxS.value = isNaN(n) ? HI : clamp(n, LO, HI);
+  }});
 }})();
 """),
         method="get",
