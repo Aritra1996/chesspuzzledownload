@@ -75,6 +75,10 @@ def _query_puzzles_sampled(theme: str, opening: str, min_r: int, max_r: int,
                             n: int) -> list:
     n_ctes = min(n, _MAX_CTES)
     bucket_size = (max_r - min_r) // n_ctes
+    if bucket_size == 0:
+        # Range narrower than n_ctes: one bucket per distinct rating value.
+        n_ctes = min(max_r - min_r + 1, n_ctes) or 1
+        bucket_size = 1
     cte_defs: list[str] = []
     cte_refs: list[str] = []
     params: list = []
