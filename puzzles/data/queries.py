@@ -54,21 +54,22 @@ def query_puzzles_capped(theme: str, opening: str,
         base += " AND instr(' ' || OpeningTags || ' ', ' ' || ? || ' ') > 0"
         params.append(opening)
 
+    # Count first — cheap (no ORDER BY, no row data transfer)
+    (total,) = fetch_one(f"SELECT COUNT(*) FROM puzzles WHERE {base}", tuple(params))
+
+    if total == 0:
+        return [], 0
+
+    if total > _CAP:
+        return [], total
+
+    # Only fetch full rows when we know the result fits within the cap
     rows = fetch_all(
         f"SELECT PuzzleId, FEN, Moves, Rating, Themes, OpeningTags"
         f" FROM puzzles WHERE {base} ORDER BY Rating LIMIT ?",
-        tuple(params + [_CAP + 1]),
+        tuple(params + [_CAP]),
     )
-
-    if not rows:
-        return [], 0
-
-    if len(rows) <= _CAP:
-        return list(rows), len(rows)
-
-    # Over cap: second query for exact count
-    (total,) = fetch_one(f"SELECT COUNT(*) FROM puzzles WHERE {base}", tuple(params))
-    return [], total
+    return list(rows), total
 
 
 def query_puzzles(theme: str, opening: str, min_r: int, max_r: int,
