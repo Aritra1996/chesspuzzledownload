@@ -1,94 +1,121 @@
-.meta-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 0.75rem;
+/* ── Progress bar (HTMX indicator) ─────────────────────────────────────────── */
+.htmx-indicator              { display: none; padding: 0.75rem 0; }
+.htmx-indicator.htmx-request { display: block; }
+
+.progress-track { background: var(--surface); border-radius: 4px; height: 6px; overflow: hidden; }
+.progress-fill  { height: 100%; background: var(--accent);
+                  animation: progress-slide 1.4s ease-in-out infinite; }
+@keyframes progress-slide {
+    0%   { transform: translateX(-100%); width: 60%; }
+    100% { transform: translateX(200%);  width: 60%; }
+}
+.stage-text { color: var(--accent); font-size: 0.85rem; margin-top: 0.4rem; }
+
+/* ── Load history table ─────────────────────────────────────────────────────── */
+.results-wrapper        { margin-top: 1.5rem; overflow-x: auto; }
+.results-wrapper.hidden { display: none; }
+
+.table-caption { font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.5rem; }
+
+.puzzle-table             { width: 100%; border-collapse: collapse; }
+.puzzle-table th          { background: var(--surface); color: var(--accent);
+                            padding: 0.55rem 0.8rem; text-align: left;
+                            font-size: 0.78rem; text-transform: uppercase;
+                            letter-spacing: 0.06em; white-space: nowrap; }
+.puzzle-table td          { padding: 0.5rem 0.8rem;
+                            border-bottom: 1px solid var(--border);
+                            vertical-align: middle; color: var(--text);
+                            font-size: 0.88rem; }
+.puzzle-table tbody tr:hover td { background: var(--surface); }
+
+/* CSS counter for # column */
+.puzzle-table tbody      { counter-reset: row-counter; }
+.puzzle-table tbody tr   { counter-increment: row-counter; }
+.col-num::before         { content: counter(row-counter);
+                           color: var(--text-muted); font-size: 0.8rem; }
+
+.status-cell     { color: var(--accent); }
+.status-pending  { color: var(--text-muted); font-style: italic; }
+.status-empty    { color: var(--text-muted); font-style: italic; }
+.status-too-many { color: #c9823a; font-weight: 600; }
+.dl-hint         { font-size: 0.78rem; color: var(--text-muted); font-style: italic; margin: 0; }
+
+/* Download buttons */
+.btn-sm          { padding: 0.25rem 0.6rem !important; font-size: 0.8rem !important; }
+.dl-buttons      { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+button[disabled] { opacity: 0.4; cursor: not-allowed; }
+
+/* Delete button */
+.btn-delete {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    border-radius: 4px;
+    padding: 0.15rem 0.5rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+    line-height: 1;
+    transition: background 0.15s, color 0.15s;
+}
+.btn-delete:hover { background: #5a1a1a; color: #ff8080; border-color: #7a2a2a; }
+
+/* HTMX delete animation — swap:280ms keeps htmx-swapping class active during delay */
+.puzzle-table tbody tr.htmx-swapping {
+    opacity: 0;
+    transform: translateX(30px);
+    transition: opacity 0.25s ease, transform 0.25s ease;
 }
 
-.meta-row .meta { margin: 0; }
-
-.pagination {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.page-info { font-size: 0.9rem; color: #c9a84c; white-space: nowrap; }
-
-.puzzle-section {
-    display: flex;
-    gap: 2rem;
-    align-items: flex-start;
-    margin-top: 1rem;
-}
-
-.puzzle-section .puzzle-grid { flex: 1; margin-top: 0; }
-
-.pdf-panel {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    min-width: 145px;
-    padding-top: 1.5rem;
-}
-
-.btn-disabled {
-    opacity: 0.5;
-    pointer-events: none;
-}
-
-.empty-state {
-    margin-top: 2rem;
-    text-align: center;
-}
-
-.empty-hint { color: #9e8b6a; font-size: 0.95rem; }
-
-.puzzle-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 1.25rem;
-    margin-top: 1.5rem;
-}
-
-.puzzle-card {
-    background: #3b2a12;
-    border: 1px solid #5a3e1a;
-    border-radius: 8px;
-    padding: 0.75rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-
-.puzzle-card svg { width: 100%; height: auto; border-radius: 4px; }
-
-.puzzle-meta { display: flex; justify-content: space-between; align-items: center; }
-
-.rating-badge {
-    background: #c9a84c;
-    color: #1a1209;
-    font-weight: 700;
-    font-size: 0.8rem;
-    padding: 2px 7px;
-    border-radius: 12px;
-}
-
-.theme-tags { font-size: 0.75rem; color: #9e8b6a; }
-
-.to-move { font-size: 0.85rem; color: #f0e6cc; }
-
-/* ── Responsive ──────────────────────────────────────────────────────────── */
+/* ── Tablet + Mobile (≤900px) — card layout, all columns shown ──────────── */
 @media (max-width: 900px) {
-    .puzzle-section { flex-direction: column; }
-    .pdf-panel {
-        flex-direction: row;
-        padding-top: 0;
-        min-width: auto;
+    .filter-group { min-width: 100%; }
+
+    .puzzle-table thead           { display: none; }
+    .puzzle-table,
+    .puzzle-table tbody,
+    .puzzle-table tr,
+    .puzzle-table td              { display: block; }
+
+    .puzzle-table tbody tr {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        margin-bottom: 0.75rem;
+        background: var(--surface);
+        overflow: hidden;
+        position: relative;
     }
+
+    .puzzle-table td {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+        padding: 0.45rem 0.75rem;
+        border-bottom: 1px solid var(--border);
+        font-size: 0.88rem;
+    }
+    .puzzle-table td:last-child   { border-bottom: none; }
+
+    .puzzle-table td[data-label]::before {
+        content: attr(data-label);
+        min-width: 72px;
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-muted);
+        font-weight: 700;
+        padding-top: 0.15rem;
+        flex-shrink: 0;
+    }
+
+    /* # counter and empty delete header not needed in card layout */
+    .col-num       { display: none; }
+
+    .dl-buttons    { flex-direction: column; gap: 0.3rem; }
+    .btn-delete    { margin-left: auto; }
 }
 
-@media (max-width: 640px) {
-    .meta-row    { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
-    .filter-group { min-width: 100%; }
+/* ── Small mobile (≤480px) — tighten spacing ────────────────────────────── */
+@media (max-width: 480px) {
+    .puzzle-table td              { padding: 0.35rem 0.6rem; font-size: 0.82rem; }
+    .puzzle-table td[data-label]::before { min-width: 60px; }
 }

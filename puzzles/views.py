@@ -1,9 +1,5 @@
-import chess
-import chess.svg
 from fasthtml.common import *
 
-from puzzles.chess import puzzle_position
-from puzzles.pdf.constants import PDF_BTN_REENABLE_MS
 from puzzles.data.state import ALL_OPENINGS, ALL_THEMES, RATING_MIN, RATING_MAX
 
 
@@ -21,135 +17,215 @@ def opening_select(current: str) -> Select:
     return Select(*options, id="opening-select", name="opening")
 
 
-def rating_slider(label_text: str, slider_id: str, val_id: str,
+def rating_slider(label_text: str, slider_id: str, input_id: str,
                   name: str, value: int) -> Div:
     return Div(
-        Label(label_text, Span(str(value), id=val_id, cls="slider-val")),
-        Input(
-            type="range", id=slider_id, name=name,
-            min=RATING_MIN, max=RATING_MAX, value=value,
-            oninput=f"document.getElementById('{val_id}').textContent=this.value",
+        Label(label_text),
+        Div(
+            Input(type="range", id=slider_id,
+                  min=RATING_MIN, max=RATING_MAX, value=value,
+                  cls="rating-slider"),
+            Input(type="number", id=input_id, name=name,
+                  min=RATING_MIN, max=RATING_MAX, value=value,
+                  cls="rating-number-input"),
+            cls="slider-with-input",
         ),
-        Div(Span(str(RATING_MIN)), Span(str(RATING_MAX)), cls="rating-row"),
         cls="filter-group",
     )
 
 
-def filter_bar(theme: str, opening: str, min_rating: int, max_rating: int) -> Form:
+def filter_bar() -> Form:
     return Form(
         Div(
-            Div(Label("Theme"), theme_select(theme), cls="filter-group"),
-            Div(Label("Opening"), opening_select(opening), cls="filter-group"),
-            rating_slider("Min rating: ", "min-slider", "min-val", "min_rating", min_rating),
-            rating_slider("Max rating: ", "max-slider", "max-val", "max_rating", max_rating),
+            Div(Label("Theme"), theme_select(""), cls="filter-group"),
+            Div(Label("Opening"), opening_select(""), cls="filter-group"),
+            rating_slider("Min rating", "min-slider", "min-input", "min_rating", RATING_MIN),
+            rating_slider("Max rating", "max-slider", "max-input", "max_rating", RATING_MAX),
             Div(
-                Button("Load Puzzles", id="btn-load", type="submit",
-                       formaction="/puzzles", cls="btn btn-primary"),
+                Button("Load Puzzles", id="btn-load", type="button",
+                       hx_get="/puzzles/load",
+                       hx_include="closest form",
+                       hx_target="#results-tbody",
+                       hx_swap="afterbegin",
+                       hx_indicator="#progress-bar",
+                       cls="btn btn-primary"),
                 cls="actions",
             ),
             cls="filters",
         ),
-        Input(type="hidden", name="loaded", value="true"),
-        Script("""
-(function() {
-  var minS = document.getElementById('min-slider');
-  var maxS = document.getElementById('max-slider');
-  var minV = document.getElementById('min-val');
-  var maxV = document.getElementById('max-val');
-  minS.addEventListener('input', function() {
-    if (parseInt(minS.value) > parseInt(maxS.value)) {
-      maxS.value = minS.value;
-      maxV.textContent = minS.value;
-    }
-  });
-  maxS.addEventListener('input', function() {
-    if (parseInt(maxS.value) < parseInt(minS.value)) {
-      minS.value = maxS.value;
-      minV.textContent = maxS.value;
-    }
-  });
-})();
-"""),
-        method="get",
-        enctype="multipart/form-data",
-    )
-
-
-def empty_state() -> Div:
-    return Div(
-        P("Configure filters above and click Load Puzzles to view puzzles.", cls="empty-hint"),
-        cls="empty-state",
-    )
-
-
-def puzzle_card(row) -> Div:
-    puzzle_id, fen, moves, rating, themes, opening_tags = row
-    board, trigger = puzzle_position(fen, moves)
-    svg_str = chess.svg.board(board, lastmove=trigger, size=220)
-    to_move = "♔ White to move" if board.turn == chess.WHITE else "♚ Black to move"
-    theme_list = " · ".join(themes.split()[:3]) if themes else ""
-    return Div(
-        NotStr(svg_str),
-        Div(
-            Span(str(rating), cls="rating-badge"),
-            Span(to_move, cls="to-move"),
-            cls="puzzle-meta",
-        ),
-        Div(theme_list, cls="theme-tags"),
-        cls="puzzle-card",
-    )
-
-
-def puzzle_grid(puzzles: list) -> Div:
-    return Div(*[puzzle_card(row) for row in puzzles], cls="puzzle-grid")
-
-
-def pdf_panel(puzzles_url: str, solutions_url: str) -> Div:
-    return Div(
-        A("⬇ Puzzles PDF",   id="btn-puzzles-pdf",  href=puzzles_url,   cls="btn btn-success"),
-        A("⬇ Solutions PDF", id="btn-solutions-pdf", href=solutions_url, cls="btn btn-outline"),
         Script(f"""
 (function() {{
-  ['btn-puzzles-pdf', 'btn-solutions-pdf'].forEach(function(id) {{
-    document.getElementById(id).addEventListener('click', function() {{
-      var p = document.getElementById('btn-puzzles-pdf');
-      var r = document.getElementById('btn-solutions-pdf');
-      p.classList.add('btn-disabled'); r.classList.add('btn-disabled');
-      setTimeout(function() {{
-        p.classList.remove('btn-disabled'); r.classList.remove('btn-disabled');
-      }}, {PDF_BTN_REENABLE_MS});
-    }});
+  var minS = document.getElementById('min-slider');
+  var maxS = document.getElementById('max-slider');
+  var minI = document.getElementById('min-input');
+  var maxI = document.getElementById('max-input');
+  var LO = {RATING_MIN}, HI = {RATING_MAX};
+
+  function clamp(v) {{ return Math.max(LO, Math.min(v, HI)); }}
+
+  // Slider → number input (live)
+  minS.addEventListener('input', function() {{
+    var v = +minS.value;
+    minI.value = v;
+    if (v > +maxS.value) {{ maxS.value = v; maxI.value = v; }}
   }});
+  maxS.addEventListener('input', function() {{
+    var v = +maxS.value;
+    maxI.value = v;
+    if (v < +minS.value) {{ minS.value = v; minI.value = v; }}
+  }});
+
+  // Number input → slider (live, clamp + cross-validate)
+  minI.addEventListener('input', function() {{
+    var v = clamp(+minI.value || LO);
+    minS.value = v;
+    if (v > +maxS.value) {{ maxS.value = v; maxI.value = v; }}
+  }});
+  maxI.addEventListener('input', function() {{
+    var v = clamp(+maxI.value || LO);
+    maxS.value = v;
+    if (v < +minS.value) {{ minS.value = v; minI.value = v; }}
+  }});
+
+  // On blur: snap input to valid clamped value in case user left it mid-edit
+  minI.addEventListener('blur', function() {{ minI.value = clamp(+minI.value || LO); minS.value = minI.value; }});
+  maxI.addEventListener('blur', function() {{ maxI.value = clamp(+maxI.value || LO); maxS.value = maxI.value; }});
 }})();
 """),
-        cls="pdf-panel",
+        method="get",
     )
 
 
-def puzzle_section(puzzles: list, puzzles_url: str, solutions_url: str) -> Div:
+def loading_indicator() -> Div:
     return Div(
-        puzzle_grid(puzzles),
-        pdf_panel(puzzles_url, solutions_url),
-        cls="puzzle-section",
+        Div(Div(cls="progress-fill"), cls="progress-track"),
+        P("Fetching puzzles...", cls="stage-text"),
+        id="progress-bar",
+        cls="htmx-indicator",
     )
 
 
-def meta_row(meta: str, page: int, total_pages: int,
-             theme: str, opening: str, min_rating: int, max_rating: int) -> Div:
-    def page_href(p: int) -> str:
-        return (f"/puzzles?theme={theme}&opening={opening}&min_rating={min_rating}"
-                f"&max_rating={max_rating}&page={p}&loaded=true")
-    prev_attrs = {"href": page_href(page - 1)} if page > 1 else {"aria_disabled": "true"}
-    next_attrs = {"href": page_href(page + 1)} if page < total_pages else {"aria_disabled": "true"}
+_HISTORY_JS = """
+(function () {
+  document.body.addEventListener('htmx:afterSwap', function (e) {
+    if (e.detail.target.id !== 'results-tbody') return;
+    document.getElementById('results-wrapper').classList.remove('hidden');
+
+    // Auto-evict oldest row (bottom) when more than 5 exist
+    var rows = document.querySelectorAll('#results-tbody tr');
+    if (rows.length > 5) {
+      var oldest = rows[rows.length - 1];
+      oldest.style.transition = 'opacity 0.28s ease, transform 0.28s ease';
+      oldest.style.opacity = '0';
+      oldest.style.transform = 'translateX(30px)';
+      setTimeout(function () { oldest.remove(); }, 300);
+    }
+  });
+
+  // PDF download via fetch() — spinner lasts exactly as long as generation
+  window.downloadPdf = function (btn, url, filename) {
+    btn.disabled = true;
+    var orig = btn.textContent;
+    btn.textContent = 'Generating PDF…';
+    fetch(url)
+      .then(function (r) { return r.blob(); })
+      .then(function (blob) {
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(a.href);
+      })
+      .finally(function () {
+        btn.disabled = false;
+        btn.textContent = orig;
+      });
+  };
+}());
+"""
+
+
+def load_history_table() -> Div:
     return Div(
-        P(meta, cls="meta"),
-        Div(
-            A("← Prev", **prev_attrs, cls="btn btn-outline"),
-            Span(f"Page {page} of {total_pages}", cls="page-info"),
-            A("Next →", **next_attrs, cls="btn btn-outline"),
-            cls="pagination",
+        Script(_HISTORY_JS),
+        P("Recent searches · oldest entry auto-removed after 5", cls="table-caption"),
+        Table(
+            Thead(Tr(
+                Th("#", cls="col-num"),
+                Th("Theme"),
+                Th("Opening"),
+                Th("Rating"),
+                Th("Status"),
+                Th("Download"),
+                Th(""),
+            )),
+            Tbody(id="results-tbody"),
+            cls="puzzle-table",
         ),
-        cls="meta-row",
+        id="results-wrapper",
+        cls="results-wrapper hidden",
+    )
+
+
+def load_history_row_pending(theme: str, opening: str, min_rating: int,
+                              max_rating: int, qs: str, row_id: str) -> Tr:
+    fetch_url = f"/puzzles/load/fetch?{qs}&row_id={row_id}"
+    return Tr(
+        Td(cls="col-num"),
+        Td(theme or "All themes", data_label="Theme"),
+        Td(opening or "All openings", data_label="Opening"),
+        Td(f"{min_rating}–{max_rating}", data_label="Rating"),
+        Td(
+            Span("Fetching puzzles...", cls="status-pending"),
+            id=f"status-{row_id}",
+            hx_get=fetch_url,
+            hx_trigger="load",
+            hx_target=f"#status-{row_id}",
+            hx_swap="outerHTML",
+            data_label="Status",
+        ),
+        Td(id=f"dl-{row_id}", data_label="Download"),
+        Td(
+            Button("×",
+                   hx_delete=f"/puzzles/row/{row_id}",
+                   hx_target="closest tr",
+                   hx_swap="outerHTML swap:280ms",
+                   cls="btn-delete"),
+        ),
+    )
+
+
+def load_history_status_cell(status_text: str, has_results: bool,
+                              qs: str, row_id: str, too_many: bool = False):
+    if too_many:
+        dl_content = P(
+            "Select a theme or opening, or tighten the rating range to get ≤1,000 results",
+            cls="dl-hint",
+        )
+        status_cls = "status-too-many"
+    else:
+        puzzles_url   = f"/puzzles/download/puzzles?{qs}&row_id={row_id}"
+        solutions_url = f"/puzzles/download/solutions?{qs}&row_id={row_id}"
+
+        def dl_btn(label: str, url: str, filename: str):
+            if has_results:
+                return Button(label,
+                              onclick=f"downloadPdf(this,'{url}','{filename}')",
+                              cls="btn btn-sm btn-outline")
+            return Button(label, cls="btn btn-sm btn-outline", disabled=True)
+
+        dl_content = Div(
+            dl_btn("Puzzles PDF",   puzzles_url,   "chess_puzzles.pdf"),
+            dl_btn("Solutions PDF", solutions_url, "solutions.pdf"),
+            cls="dl-buttons",
+        )
+        status_cls = "status-cell" if has_results else "status-empty"
+
+    return (
+        Td(status_text, id=f"status-{row_id}", cls=status_cls, data_label="Status"),
+        Td(dl_content, id=f"dl-{row_id}", hx_swap_oob="true", data_label="Download"),
     )
 
 

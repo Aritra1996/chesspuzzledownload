@@ -39,6 +39,42 @@ def count_puzzles(theme: str, opening: str, min_r: int, max_r: int) -> int:
     return count
 
 
+_CAP = 1_000
+
+
+def query_puzzles_capped(theme: str, opening: str,
+                         min_r: int, max_r: int) -> tuple[list, int]:
+    """Single Turso round trip. Returns (puzzles, total).
+    If total > _CAP, puzzles is [] so caller can warn without fetching all rows."""
+    base = "Rating BETWEEN ? AND ?"
+    params: list = [min_r, max_r]
+    if theme:
+        base += " AND instr(' ' || Themes || ' ', ' ' || ? || ' ') > 0"
+        params.append(theme)
+    if opening:
+        base += " AND instr(' ' || OpeningTags || ' ', ' ' || ? || ' ') > 0"
+        params.append(opening)
+
+    sql = f"""
+        WITH cnt AS (SELECT COUNT(*) AS n FROM puzzles WHERE {base})
+        SELECT p.PuzzleId, p.FEN, p.Moves, p.Rating, p.Themes, p.OpeningTags, cnt.n
+        FROM puzzles p, cnt
+        WHERE p.{base}
+        ORDER BY p.Rating
+        LIMIT ?
+    """
+    rows = fetch_all(sql, tuple(params + params + [_CAP + 1]))
+
+    if not rows:
+        return [], 0
+
+    total = rows[0][-1]
+    if len(rows) > _CAP:
+        return [], total
+
+    return [r[:-1] for r in rows], total
+
+
 def query_puzzles(theme: str, opening: str, min_r: int, max_r: int,
                   limit: int | None = None, offset: int = 0) -> list:
     sql = """
