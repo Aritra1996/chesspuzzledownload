@@ -17,4 +17,5 @@ wheels/
 .vercel
 
 # Ingest resume state — local only
-ingestion/ingest_progress.json
+scripts/ingest_progress.json
+.env*.local
