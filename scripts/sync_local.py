@@ -82,6 +82,12 @@ lo, hi = turso_one("SELECT MIN(Rating), MAX(Rating) FROM puzzles")
 conn.execute("DELETE FROM state_rating_bounds")
 conn.execute("INSERT INTO state_rating_bounds VALUES (?, ?)", (lo or 0, hi or 3000))
 
+print("Syncing puzzle count...")
+conn.execute("CREATE TABLE IF NOT EXISTS state_puzzle_count (total INTEGER)")
+(total,) = turso_one("SELECT COUNT(*) FROM puzzles")
+conn.execute("DELETE FROM state_puzzle_count")
+conn.execute("INSERT INTO state_puzzle_count VALUES (?)", (total,))
+
 print("Syncing 1000 sample puzzles...")
 rows = turso_all(
     "SELECT PuzzleId, FEN, Moves, Rating, Themes, OpeningTags FROM puzzles ORDER BY Rating LIMIT 1000"
