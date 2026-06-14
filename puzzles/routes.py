@@ -6,12 +6,13 @@ from starlette.responses import Response
 
 from app import rt
 import core.cache as cache
-from puzzles.data.queries import CAP, count_puzzles, query_puzzles
+from constants import N_PUZZLES_DEFAULT
+from puzzles.data.queries import query_puzzles
 from puzzles.pdf.generate import generate_puzzle_pdf, generate_solutions_pdf
 from puzzles.data.state import RATING_MAX, RATING_MIN
-from puzzles.validators import sanitise_rating
+from puzzles.validators import sanitise_n_puzzles, sanitise_rating
 from puzzles.views import (css_link, filter_bar, load_history_row_pending,
-                            load_history_status_cell, load_history_status_cell_counting,
+                            load_history_status_cell,
                             load_history_table, loading_indicator, puzzle_css_link)
 
 
@@ -27,52 +28,44 @@ def get():
 
 @rt("/puzzles/load")
 def get(theme: str = "", opening: str = "",
-        min_rating: int = RATING_MIN, max_rating: int = RATING_MAX):
+        min_rating: int = RATING_MIN, max_rating: int = RATING_MAX,
+        n_puzzles: int = N_PUZZLES_DEFAULT):
     min_rating, max_rating = sanitise_rating(min_rating, max_rating)
+    n_puzzles = sanitise_n_puzzles(n_puzzles)
     qs = urlencode({"theme": theme, "opening": opening,
-                    "min_rating": min_rating, "max_rating": max_rating})
+                    "min_rating": min_rating, "max_rating": max_rating,
+                    "n_puzzles": n_puzzles})
     row_id = str(int(time.time() * 1000))
-    return load_history_row_pending(theme, opening, min_rating, max_rating, qs, row_id)
-
-
-@rt("/puzzles/load/fetch")
-def get(theme: str = "", opening: str = "",
-        min_rating: int = RATING_MIN, max_rating: int = RATING_MAX, row_id: str = ""):
-    min_rating, max_rating = sanitise_rating(min_rating, max_rating)
-    qs = urlencode({"theme": theme, "opening": opening,
-                    "min_rating": min_rating, "max_rating": max_rating})
-    total = count_puzzles(theme, opening, min_rating, max_rating)
-
-    if total == 0:
-        return load_history_status_cell("No puzzles found for these filters",
-                                        has_results=False, qs=qs, row_id=row_id)
-    if total > CAP:
-        return load_history_status_cell(f"{total:,} puzzles found — too many to download",
-                                        has_results=False, qs=qs, row_id=row_id, too_many=True)
-
-    return load_history_status_cell_counting(total, qs, row_id)
+    return load_history_row_pending(theme, opening, min_rating, max_rating, n_puzzles, qs, row_id)
 
 
 @rt("/puzzles/load/data")
 def get(theme: str = "", opening: str = "",
-        min_rating: int = RATING_MIN, max_rating: int = RATING_MAX, row_id: str = ""):
+        min_rating: int = RATING_MIN, max_rating: int = RATING_MAX,
+        n_puzzles: int = N_PUZZLES_DEFAULT, row_id: str = ""):
     min_rating, max_rating = sanitise_rating(min_rating, max_rating)
+    n_puzzles = sanitise_n_puzzles(n_puzzles)
     qs = urlencode({"theme": theme, "opening": opening,
-                    "min_rating": min_rating, "max_rating": max_rating})
-    puzzles = query_puzzles(theme, opening, min_rating, max_rating, limit=CAP)
+                    "min_rating": min_rating, "max_rating": max_rating,
+                    "n_puzzles": n_puzzles})
+    puzzles = query_puzzles(theme, opening, min_rating, max_rating, n_puzzles=n_puzzles)
+    if not puzzles:
+        return load_history_status_cell("No puzzles found for these filters",
+                                        has_results=False, qs=qs, row_id=row_id)
     cache.put(row_id, puzzles)
-    return load_history_status_cell(f"{len(puzzles):,} puzzles found",
+    return load_history_status_cell(f"{len(puzzles):,} puzzles selected",
                                     has_results=True, qs=qs, row_id=row_id)
 
 
 @rt("/puzzles/download/puzzles")
 def download_puzzles(theme: str = "", opening: str = "",
                      min_rating: int = RATING_MIN, max_rating: int = RATING_MAX,
-                     row_id: str = ""):
+                     n_puzzles: int = N_PUZZLES_DEFAULT, row_id: str = ""):
     min_rating, max_rating = sanitise_rating(min_rating, max_rating)
+    n_puzzles = sanitise_n_puzzles(n_puzzles)
     puzzles = cache.get(row_id) if row_id else None
     if puzzles is None:
-        puzzles = query_puzzles(theme, opening, min_rating, max_rating, limit=CAP)
+        puzzles = query_puzzles(theme, opening, min_rating, max_rating, n_puzzles=n_puzzles)
     pdf_bytes = generate_puzzle_pdf(puzzles, theme, opening, min_rating, max_rating)
     return Response(
         content=pdf_bytes,
@@ -84,11 +77,12 @@ def download_puzzles(theme: str = "", opening: str = "",
 @rt("/puzzles/download/solutions")
 def download_solutions(theme: str = "", opening: str = "",
                        min_rating: int = RATING_MIN, max_rating: int = RATING_MAX,
-                       row_id: str = ""):
+                       n_puzzles: int = N_PUZZLES_DEFAULT, row_id: str = ""):
     min_rating, max_rating = sanitise_rating(min_rating, max_rating)
+    n_puzzles = sanitise_n_puzzles(n_puzzles)
     puzzles = cache.get(row_id) if row_id else None
     if puzzles is None:
-        puzzles = query_puzzles(theme, opening, min_rating, max_rating, limit=CAP)
+        puzzles = query_puzzles(theme, opening, min_rating, max_rating, n_puzzles=n_puzzles)
     pdf_bytes = generate_solutions_pdf(puzzles, theme, opening, min_rating, max_rating)
     return Response(
         content=pdf_bytes,

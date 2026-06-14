@@ -1,5 +1,6 @@
 from fasthtml.common import *
 
+from constants import N_PUZZLES_DEFAULT, N_PUZZLES_MAX, N_PUZZLES_MIN
 from puzzles.data.state import ALL_OPENINGS, ALL_THEMES, RATING_MIN, RATING_MAX
 
 
@@ -34,6 +35,22 @@ def rating_slider(label_text: str, slider_id: str, input_id: str,
     )
 
 
+def n_puzzles_slider(value: int) -> Div:
+    return Div(
+        Label("Puzzles"),
+        Div(
+            Input(type="range", id="npuzzles-slider",
+                  min=N_PUZZLES_MIN, max=N_PUZZLES_MAX, value=value,
+                  cls="rating-slider"),
+            Input(type="number", id="npuzzles-input", name="n_puzzles",
+                  min=N_PUZZLES_MIN, max=N_PUZZLES_MAX, value=value,
+                  cls="rating-number-input"),
+            cls="slider-with-input",
+        ),
+        cls="filter-group",
+    )
+
+
 def filter_bar() -> Form:
     return Form(
         Div(
@@ -41,6 +58,7 @@ def filter_bar() -> Form:
             Div(Label("Opening"), opening_select(""), cls="filter-group"),
             rating_slider("Min rating", "min-slider", "min-input", "min_rating", RATING_MIN),
             rating_slider("Max rating", "max-slider", "max-input", "max_rating", RATING_MAX),
+            n_puzzles_slider(N_PUZZLES_DEFAULT),
             Div(
                 Button("Load Puzzles", id="btn-load", type="button",
                        hx_get="/puzzles/load",
@@ -99,6 +117,21 @@ def filter_bar() -> Form:
     var n = +maxI.value;
     var lo = Math.max(LO, +minS.value);
     maxI.value = maxS.value = isNaN(n) ? HI : clamp(n, lo, HI);
+  }});
+}})();
+
+(function() {{
+  var s = document.getElementById('npuzzles-slider');
+  var inp = document.getElementById('npuzzles-input');
+  s.addEventListener('input', function() {{ inp.value = s.value; }});
+  inp.addEventListener('input', function() {{
+    var n = +inp.value;
+    if (!inp.value || isNaN(n) || n < {N_PUZZLES_MIN} || n > {N_PUZZLES_MAX}) return;
+    s.value = n;
+  }});
+  inp.addEventListener('blur', function() {{
+    var n = Math.round(+inp.value);
+    inp.value = s.value = isNaN(n) ? {N_PUZZLES_DEFAULT} : Math.max({N_PUZZLES_MIN}, Math.min({N_PUZZLES_MAX}, n));
   }});
 }})();
 """),
@@ -182,17 +215,23 @@ def load_history_table() -> Div:
 
 
 def load_history_row_pending(theme: str, opening: str, min_rating: int,
-                              max_rating: int, qs: str, row_id: str) -> Tr:
-    fetch_url = f"/puzzles/load/fetch?{qs}&row_id={row_id}"
+                              max_rating: int, n_puzzles: int,
+                              qs: str, row_id: str) -> Tr:
+    data_url = f"/puzzles/load/data?{qs}&row_id={row_id}"
+    parts = []
+    if theme:   parts.append(theme)
+    if opening: parts.append(opening)
+    parts.append(f"{min_rating}–{max_rating}")
+    status_text = f"Sampling {n_puzzles} puzzles · {' · '.join(parts)}…"
     return Tr(
         Td(cls="col-num"),
         Td(theme or "All themes", data_label="Theme"),
         Td(opening or "All openings", data_label="Opening"),
         Td(f"{min_rating}–{max_rating}", data_label="Rating"),
         Td(
-            Span("Fetching puzzles...", cls="status-pending"),
+            Span(status_text, cls="status-pending"),
             id=f"status-{row_id}",
-            hx_get=fetch_url,
+            hx_get=data_url,
             hx_trigger="load",
             hx_target=f"#status-{row_id}",
             hx_swap="outerHTML",
@@ -209,49 +248,25 @@ def load_history_row_pending(theme: str, opening: str, min_rating: int,
     )
 
 
-def load_history_status_cell_counting(total: int, qs: str, row_id: str):
-    data_url = f"/puzzles/load/data?{qs}&row_id={row_id}"
-    return (
-        Td(
-            f"{total:,} puzzles found",
-            Span(" — getting puzzles…", cls="status-pending"),
-            id=f"status-{row_id}",
-            cls="status-cell",
-            hx_get=data_url,
-            hx_trigger="load",
-            hx_target=f"#status-{row_id}",
-            hx_swap="outerHTML",
-            data_label="Status",
-        ),
-        Td(id=f"dl-{row_id}", hx_swap_oob="true", data_label="Download"),
-    )
-
 
 def load_history_status_cell(status_text: str, has_results: bool,
-                              qs: str, row_id: str, too_many: bool = False):
-    if too_many:
-        dl_content = P(
-            "Select a theme or opening, or tighten the rating range to get ≤100 results",
-            cls="dl-hint",
-        )
-        status_cls = "status-too-many"
-    else:
-        puzzles_url   = f"/puzzles/download/puzzles?{qs}&row_id={row_id}"
-        solutions_url = f"/puzzles/download/solutions?{qs}&row_id={row_id}"
+                              qs: str, row_id: str):
+    puzzles_url   = f"/puzzles/download/puzzles?{qs}&row_id={row_id}"
+    solutions_url = f"/puzzles/download/solutions?{qs}&row_id={row_id}"
 
-        def dl_btn(label: str, url: str, filename: str):
-            if has_results:
-                return Button(label,
-                              onclick=f"downloadPdf(this,'{url}','{filename}')",
-                              cls="btn btn-sm btn-outline")
-            return Button(label, cls="btn btn-sm btn-outline", disabled=True)
+    def dl_btn(label: str, url: str, filename: str):
+        if has_results:
+            return Button(label,
+                          onclick=f"downloadPdf(this,'{url}','{filename}')",
+                          cls="btn btn-sm btn-outline")
+        return Button(label, cls="btn btn-sm btn-outline", disabled=True)
 
-        dl_content = Div(
-            dl_btn("Puzzles PDF",   puzzles_url,   "chess_puzzles.pdf"),
-            dl_btn("Solutions PDF", solutions_url, "solutions.pdf"),
-            cls="dl-buttons",
-        )
-        status_cls = "status-cell" if has_results else "status-empty"
+    dl_content = Div(
+        dl_btn("Puzzles PDF",   puzzles_url,   "chess_puzzles.pdf"),
+        dl_btn("Solutions PDF", solutions_url, "solutions.pdf"),
+        cls="dl-buttons",
+    )
+    status_cls = "status-cell" if has_results else "status-empty"
 
     return (
         Td(status_text, id=f"status-{row_id}", cls=status_cls, data_label="Status"),

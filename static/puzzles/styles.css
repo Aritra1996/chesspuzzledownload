@@ -37,8 +37,6 @@
 .status-cell     { color: var(--accent); }
 .status-pending  { color: var(--text-muted); font-style: italic; }
 .status-empty    { color: var(--text-muted); font-style: italic; }
-.status-too-many { color: #c9823a; font-weight: 600; }
-.dl-hint         { font-size: 0.78rem; color: var(--text-muted); font-style: italic; margin: 0; }
 
 /* Download buttons */
 .btn-sm          { padding: 0.25rem 0.6rem !important; font-size: 0.8rem !important; }
